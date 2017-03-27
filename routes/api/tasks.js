@@ -14,11 +14,21 @@ const putTasks = (req, res) => {
       getparam: req.params.getparam,
       postparam: req.params.postparam
     }
-    
+
     res.json(responseJson)
   })
 }
 
+const getTasks = (req, res) => {
+  // TODO: integrate with db
+  const mockTasks = [
+    { name: 'task1' }, { name: 'task2' }
+  ]
+
+  res.json(mockTasks)
+}
+
 module.exports = {
+  getTasks,
   putTasks
 }

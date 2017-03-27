@@ -53,4 +53,31 @@ describe('API', () => {
         .expect(404, done)
     })
   })
+
+  describe('GET /tasks', () => {
+    it('GET /tasks returns 200 on happy flow', done => {
+      // TODO modify this test after database integration
+      supertest(app)
+        .get('/api/tasks')
+        .expect(200)
+        .end((err, res) => {
+          expect(res.body).to.not.be.empty
+          expect(res.body).to.have.lengthOf(2)
+          done(err)
+        })
+    })
+  })
+
+  describe('GET /machines', () => {
+    it('GET /machines returns 200 on happy flow', done => {
+      supertest(app)
+        .get('/api/machines')
+        .expect(200)
+        .end((err, res) => {
+          expect(res.body).to.not.be.empty
+          expect(res.body).to.have.lengthOf(2)
+          done(err)
+        })
+    })
+  })
 })
