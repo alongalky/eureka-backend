@@ -22,7 +22,7 @@ const putTasks = (req, res) => {
 const getTasks = (req, res) => {
   // TODO: integrate with db
   const mockTasks = [
-    { name: 'task1' }, { name: 'task2' }
+    { id: 'task1' }, { id: 'task2' }
   ]
 
   res.json(mockTasks)
