@@ -19,7 +19,10 @@ const putTasks = database => (req, res) => {
 const getTasks = database => (req, res) =>
   database.getTasks(req.key)
     .then(allTasks => res.json(allTasks))
-    .catch(err => res.status(400).send({message: err}))
+    .catch(err => {
+      console.error(err)
+      return res.status(400)
+    })
 
 module.exports = database => ({
   getTasks: getTasks(database),
