@@ -1,3 +1,4 @@
+const sinon = require('sinon')
 const supertest = require('supertest')
 const apiRouter = require('../../routes/api')
 const express = require('express')
@@ -6,6 +7,15 @@ const bodyParser = require('body-parser')
 const expressValidator = require('express-validator')
 
 describe('API', () => {
+  const database = {
+    machines: {
+      getMachines: sinon.stub()
+    },
+    tasks: {
+      addTask: sinon.stub(),
+      getTasks: sinon.stub()
+    }
+  }
   const app = express()
 
   before(() => {
@@ -15,7 +25,16 @@ describe('API', () => {
     app.use(expressValidator())
 
     // Route
-    app.use('/api', apiRouter)
+    app.use('/api', apiRouter({
+      machinesDatabase: database.machines,
+      tasksDatabase: database.tasks
+    }))
+  })
+
+  beforeEach(() => {
+    database.machines.getMachines.reset()
+    database.tasks.getTasks.reset()
+    database.tasks.addTask.reset()
   })
 
   describe('GET /health-check', () => {
@@ -38,25 +57,18 @@ describe('API', () => {
 
   describe('PUT /tasks', () => {
     it('PUT /tasks returns 200 on happy flow', done => {
-      supertest(app)
-        .put('/api/tasks/jones')
-        .expect(200, done)
-    })
-    it('PUT /tasks fails with 400 when task id is not alphanumeric', done => {
-      supertest(app)
-        .put('/api/tasks/---')
-        .expect(400, done)
-    })
-    it('PUT /tasks fails with 404 when task id is missing', done => {
+      database.tasks.addTask.returns(Promise.resolve())
+
       supertest(app)
         .put('/api/tasks')
-        .expect(404, done)
+        .expect(200, done)
     })
   })
 
   describe('GET /tasks', () => {
     it('GET /tasks returns 200 on happy flow', done => {
-      // TODO modify this test after database integration
+      database.tasks.getTasks.returns(Promise.resolve(['happy', 'joy']))
+
       supertest(app)
         .get('/api/tasks')
         .expect(200)
@@ -70,12 +82,14 @@ describe('API', () => {
 
   describe('GET /machines', () => {
     it('GET /machines returns 200 on happy flow', done => {
+      database.machines.getMachines.returns(Promise.resolve(['happy', 'flow', 'forever']))
+
       supertest(app)
         .get('/api/machines')
         .expect(200)
         .end((err, res) => {
           expect(res.body).to.not.be.empty
-          expect(res.body).to.have.lengthOf(2)
+          expect(res.body).to.have.lengthOf(3)
           done(err)
         })
     })
