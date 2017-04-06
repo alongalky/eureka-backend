@@ -2,7 +2,9 @@ const express = require('express')
 const app = express()
 const bodyParser = require('body-parser')
 const expressValidator = require('express-validator')
-const router = require('./routes/api')
+const machinesDatabase = require('./database/machines')
+const tasksDatabase = require('./database/tasks')
+const apiRouter = require('./routes/api')({machinesDatabase, tasksDatabase})
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }))
@@ -20,7 +22,7 @@ app.use((req, res, next) => {
 
 var port = process.env.PORT || 8080
 
-app.use('/api', router)
+app.use('/api', apiRouter)
 
 app.listen(port)
 console.log('Magic happens on port ' + port)
