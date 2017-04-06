@@ -21,7 +21,8 @@
   "dependencies": {
     "body-parser": "^1.17.1",
     "express": "^4.15.2",
-    "express-validator": "^3.1.2"
+    "express-validator": "^3.1.2",
+    "object-merge": "^2.5.1"
   },
   "devDependencies": {
     "chai": "^3.5.0",
