@@ -1,34 +1,30 @@
-const util = require('util')
+const putTasks = database => (req, res) => {
+  const params = {
+    command: req.body.command && req.body.command.join(' '),
+    output: req.body.output,
+    machine: req.body.machine,
+    key: req.key,
+    taskName: req.body.taskName,
+    tier: req.body.tier
+  }
 
-const putTasks = (req, res) => {
-  req.checkParams('id', 'Missing task id').notEmpty().isAlphanumeric()
-
-  req.getValidationResult().then(function (result) {
-    if (!result.isEmpty()) {
-      res.status(400).send('There have been validation errors: ' + util.inspect(result.array()))
-      return
-    }
-
-    const responseJson = {
-      urlparam: req.params.urlparam,
-      getparam: req.params.getparam,
-      postparam: req.params.postparam
-    }
-
-    res.json(responseJson)
-  })
+  return database.addTask(params)
+    .then(result => res.status(200).send({message: 'Task queued successfuly'}))
+    .catch(err => {
+      console.error(err)
+      return res.status(400).send({message: 'Failed to add task', error: err})
+    })
 }
 
-const getTasks = (req, res) => {
-  // TODO: integrate with db
-  const mockTasks = [
-    { id: 'task1' }, { id: 'task2' }
-  ]
+const getTasks = database => (req, res) =>
+  database.getTasks(req.key)
+    .then(allTasks => res.json(allTasks))
+    .catch(err => {
+      console.error(err)
+      return res.status(400)
+    })
 
-  res.json(mockTasks)
-}
-
-module.exports = {
-  getTasks,
-  putTasks
-}
+module.exports = database => ({
+  getTasks: getTasks(database),
+  putTasks: putTasks(database)
+})
