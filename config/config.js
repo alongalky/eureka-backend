@@ -9,6 +9,8 @@ module.exports = (env = process.env.EUREKA_ENV) => {
   }
 
   console.log('Loading configuration from file', filename)
+  const config = require(filename)
+  console.log('Configuration is', config)
 
-  return require(filename)
+  return config
 }
