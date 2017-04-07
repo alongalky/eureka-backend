@@ -1,4 +1,6 @@
 const sinon = require('sinon')
+const sinonStubPromise = require('sinon-stub-promise')
+sinonStubPromise(sinon)
 const supertest = require('supertest')
 const apiRouter = require('../../routes/api')
 const express = require('express')
@@ -22,7 +24,11 @@ describe('API', () => {
     // Middleware
     app.use(bodyParser.urlencoded({ extended: true }))
     app.use(bodyParser.json())
-    app.use(expressValidator())
+    app.use(expressValidator({
+      customValidators: {
+        isArray: Array.isArray
+      }
+    }))
 
     // Route
     app.use('/api', apiRouter({
@@ -56,15 +62,73 @@ describe('API', () => {
   })
 
   describe('POST /tasks', () => {
-    it('POST /tasks returns 200 on happy flow', done => {
+    const goodParams = {
+      command: ['hello', 'world'],
+      machine: 'machina',
+      taskName: 'tasky',
+      tier: 'gargantuan',
+      output: '/output'
+    }
+
+    it('returns 200 on happy flow', done => {
       database.tasks.addTask.returns(Promise.resolve())
 
       supertest(app)
-        .post('/api/accounts/1234/tasks')
+        .post('/api/accounts/1234/tasks', goodParams)
+        .send(goodParams)
         .expect(200)
         .end((err, res) => {
-          sinon.assert.calledWithMatch(database.tasks.addTask, {account: '1234'})
+          sinon.assert.alwaysCalledWithMatch(database.tasks.addTask, {
+            command: 'hello world',
+            output: '/output',
+            machine: 'machina',
+            taskName: 'tasky',
+            tier: 'gargantuan',
+            account: '1234'
+          })
 
+          done(err)
+        })
+    })
+    it('returns 422 when command is not in array format', done => {
+      const badParams = Object.assign({}, goodParams, {command: 'hello'})
+
+      supertest(app)
+        .post('/api/accounts/1234/tasks', {})
+        .send(badParams)
+        .expect(422)
+        .end((err, res) => {
+          sinon.assert.notCalled(database.tasks.addTask)
+
+          done(err)
+        })
+    })
+    it('returns 422 when taskName is missing', done => {
+      const badParams = Object.assign({}, goodParams, {taskName: undefined})
+
+      supertest(app)
+        .post('/api/accounts/1234/tasks')
+        .send(badParams)
+        .expect(422)
+        .end((err, res) => {
+          sinon.assert.notCalled(database.tasks.addTask)
+
+          done(err)
+        })
+    })
+    it('returns 500 when database operation fails', done => {
+      database.tasks.addTask.rejects(new Error('Crazy database error'))
+
+      const oldError = console.error
+      console.error = () => {}
+      supertest(app)
+        .post('/api/accounts/1234/tasks')
+        .send(goodParams)
+        .expect(500)
+        .end((err, res) => {
+          sinon.assert.calledOnce(database.tasks.addTask)
+
+          console.error = oldError
           done(err)
         })
     })
