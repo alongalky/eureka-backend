@@ -12,7 +12,7 @@ module.exports = ({machinesDatabase, tasksDatabase}) => {
 
   apiRouter.use('/accounts/:account_id', accountsRouter)
 
-  accountsRouter.put('/tasks', tasksApi.putTasks)
+  accountsRouter.post('/tasks', tasksApi.addTask)
   accountsRouter.get('/tasks', tasksApi.getTasks)
   accountsRouter.get('/machines', machinesApi.getMachines)
 

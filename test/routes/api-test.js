@@ -55,12 +55,12 @@ describe('API', () => {
     })
   })
 
-  describe('PUT /tasks', () => {
-    it('PUT /tasks returns 200 on happy flow', done => {
+  describe('POST /tasks', () => {
+    it('POST /tasks returns 200 on happy flow', done => {
       database.tasks.addTask.returns(Promise.resolve())
 
       supertest(app)
-        .put('/api/accounts/1234/tasks')
+        .post('/api/accounts/1234/tasks')
         .expect(200)
         .end((err, res) => {
           sinon.assert.calledWithMatch(database.tasks.addTask, {account: '1234'})

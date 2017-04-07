@@ -1,4 +1,4 @@
-const putTasks = database => (req, res) => {
+const addTask = database => (req, res) => {
   const params = {
     command: req.body.command && req.body.command.join(' '),
     output: req.body.output,
@@ -29,5 +29,5 @@ const getTasks = database => (req, res) =>
 
 module.exports = database => ({
   getTasks: getTasks(database),
-  putTasks: putTasks(database)
+  addTask: addTask(database)
 })
