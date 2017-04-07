@@ -60,8 +60,13 @@ describe('API', () => {
       database.tasks.addTask.returns(Promise.resolve())
 
       supertest(app)
-        .put('/api/tasks')
-        .expect(200, done)
+        .put('/api/accounts/1234/tasks')
+        .expect(200)
+        .end((err, res) => {
+          sinon.assert.calledWithMatch(database.tasks.addTask, {account: '1234'})
+
+          done(err)
+        })
     })
   })
 
@@ -70,11 +75,13 @@ describe('API', () => {
       database.tasks.getTasks.returns(Promise.resolve(['happy', 'joy']))
 
       supertest(app)
-        .get('/api/tasks')
+        .get('/api/accounts/1234/tasks')
         .expect(200)
         .end((err, res) => {
           expect(res.body).to.not.be.empty
           expect(res.body).to.have.lengthOf(2)
+          sinon.assert.calledWithMatch(database.tasks.getTasks, {account: '1234'})
+
           done(err)
         })
     })
@@ -85,11 +92,13 @@ describe('API', () => {
       database.machines.getMachines.returns(Promise.resolve(['happy', 'flow', 'forever']))
 
       supertest(app)
-        .get('/api/machines')
+        .get('/api/accounts/1234/machines')
         .expect(200)
         .end((err, res) => {
           expect(res.body).to.not.be.empty
           expect(res.body).to.have.lengthOf(3)
+          sinon.assert.calledWithMatch(database.machines.getMachines, {account: '1234'})
+
           done(err)
         })
     })

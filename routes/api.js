@@ -1,17 +1,20 @@
 const express = require('express')
-const router = express.Router()
+const apiRouter = express.Router()
+const accountsRouter = express.Router({mergeParams: true})
 
 module.exports = ({machinesDatabase, tasksDatabase}) => {
   const machinesApi = require('./api/machines')(machinesDatabase)
   const tasksApi = require('./api/tasks')(tasksDatabase)
 
-  router.get('/health-check', (req, res) => {
+  apiRouter.get('/health-check', (req, res) => {
     res.json({ message: 'All is well' })
   })
 
-  router.put('/tasks', tasksApi.putTasks)
-  router.get('/tasks', tasksApi.getTasks)
-  router.get('/machines', machinesApi.getMachines)
+  apiRouter.use('/accounts/:account_id', accountsRouter)
 
-  return router
+  accountsRouter.put('/tasks', tasksApi.putTasks)
+  accountsRouter.get('/tasks', tasksApi.getTasks)
+  accountsRouter.get('/machines', machinesApi.getMachines)
+
+  return apiRouter
 }

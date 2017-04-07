@@ -5,7 +5,8 @@ const putTasks = database => (req, res) => {
     machine: req.body.machine,
     key: req.key,
     taskName: req.body.taskName,
-    tier: req.body.tier
+    tier: req.body.tier,
+    account: req.params.account_id
   }
 
   return database.addTask(params)
@@ -17,8 +18,10 @@ const putTasks = database => (req, res) => {
 }
 
 const getTasks = database => (req, res) =>
-  database.getTasks(req.key)
-    .then(allTasks => res.json(allTasks))
+  database.getTasks({
+    account: req.params.account_id,
+    key: req.key
+  }).then(allTasks => res.json(allTasks))
     .catch(err => {
       console.error(err)
       return res.status(400)
