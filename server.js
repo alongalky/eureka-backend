@@ -1,6 +1,7 @@
 const express = require('express')
 const app = express()
 const bodyParser = require('body-parser')
+const morgan = require('morgan')
 const expressValidator = require('express-validator')
 const machinesDatabase = require('./database/machines')
 const tasksDatabase = require('./database/tasks')
@@ -10,6 +11,8 @@ const apiRouter = require('./routes/api')({machinesDatabase, tasksDatabase})
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
 app.use(expressValidator())
+// Request logging middleware
+app.use(morgan('tiny'))
 
 // Our authentication middleware
 app.use((req, res, next) => {
