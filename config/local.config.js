@@ -5,6 +5,6 @@ module.exports = {
     port: 3306,
     user: 'root',
     password: '',
-    database: 'eureka-local'
+    database: 'eureka_local'
   }
 }

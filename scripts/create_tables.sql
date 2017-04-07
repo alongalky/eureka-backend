@@ -28,6 +28,5 @@ CREATE TABLE tasks
   `tier` VARCHAR(45) NOT NULL,
   `machine_id` VARCHAR(45) NOT NULL,
   PRIMARY KEY (task_id),
-  FOREIGN KEY (machine_id) REFERENCES machines(machine_id),
-  UNIQUE (name, machine_id)
+  FOREIGN KEY (machine_id) REFERENCES machines(machine_id)
 );
