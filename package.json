@@ -23,7 +23,7 @@
     "express": "^4.15.2",
     "express-validator": "^3.1.2",
     "mysql2": "^1.2.0",
-    "object-merge": "^2.5.1"
+    "object-merge": "^2.5.1",
     "uuid": "^3.0.1"
   },
   "devDependencies": {
