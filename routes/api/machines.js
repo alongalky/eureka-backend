@@ -1,12 +1,12 @@
-const getMachines = (req, res) => {
-  // TODO: integrate with db
-  const mockMachines = [
-    { id: 'machina1' }, { id: 'machina2' }
-  ]
-
-  res.json(mockMachines)
-}
-
-module.exports = {
-  getMachines
+module.exports = database => {
+  return {
+    getMachines: (req, res) => {
+      return database.getMachines(req.key)
+        .then(allMachines => res.json(allMachines))
+        .catch(err => {
+          console.error(err)
+          return res.status(400)
+        })
+    }
+  }
 }
