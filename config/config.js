@@ -1,16 +1,14 @@
-const fs = require('fs')
 const path = require('path')
 
-module.exports = (env = process.env.EUREKA_ENV) => {
-  let filename = path.join(__dirname, `${env || ''}.config.js`)
-  if (!fs.existsSync(filename)) {
-    console.log('No environment specified, using default')
-    filename = path.join(__dirname, `default.config.js`)
+module.exports = (fs, readFile, env = process.env.EUREKA_ENV) => {
+  const defaultsfile = path.join(__dirname, 'defaults.config.js')
+  let environmentfile = path.join(__dirname, `${env || ''}.config.js`)
+  if (!fs.existsSync(environmentfile)) {
+    /* We assume local environment as fallback */
+    environmentfile = path.join(__dirname, 'local.config.js')
   }
 
-  console.log('Loading configuration from file', filename)
-  const config = require(filename)
-  console.log('Configuration is', config)
+  const config = Object.assign(readFile(defaultsfile), readFile(environmentfile))
 
   return config
 }
