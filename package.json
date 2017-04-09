@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "test": "mocha test/**/*.js --reporter list"
+    "test": "mocha test/**/*.js --reporter list",
+    "lint": "eslint **/*.js --fix"
   },
   "repository": {
     "type": "git",

@@ -19,3 +19,10 @@
 
 ### Deploying
 Once you have everything set up, runnning `eb deploy` should work.
+
+### Linting
+In order to lint all project files, run:
+```SHELL
+npm run lint
+```
+This will  fix all auto-fixable lint issues.
