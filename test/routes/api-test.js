@@ -74,7 +74,7 @@ describe('API', () => {
       database.tasks.addTask.returns(Promise.resolve())
 
       supertest(app)
-        .post('/api/accounts/1234/tasks', goodParams)
+        .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks', goodParams)
         .send(goodParams)
         .expect(200)
         .end((err, res) => {
@@ -84,7 +84,7 @@ describe('API', () => {
             machine: 'machina',
             taskName: 'tasky',
             tier: 'gargantuan',
-            account: '1234'
+            account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91'
           })
 
           done(err)
@@ -94,7 +94,7 @@ describe('API', () => {
       const badParams = Object.assign({}, goodParams, {command: 'hello'})
 
       supertest(app)
-        .post('/api/accounts/1234/tasks', {})
+        .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks', {})
         .send(badParams)
         .expect(422)
         .end((err, res) => {
@@ -104,6 +104,19 @@ describe('API', () => {
         })
     })
     it('returns 422 when taskName is missing', done => {
+      const badParams = Object.assign({}, goodParams, {taskName: undefined})
+
+      supertest(app)
+        .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+        .send(badParams)
+        .expect(422)
+        .end((err, res) => {
+          sinon.assert.notCalled(database.tasks.addTask)
+
+          done(err)
+        })
+    })
+    it('returns 422 when accounts is not a valid UUID', done => {
       const badParams = Object.assign({}, goodParams, {taskName: undefined})
 
       supertest(app)
@@ -122,7 +135,7 @@ describe('API', () => {
       const oldError = console.error
       console.error = () => {}
       supertest(app)
-        .post('/api/accounts/1234/tasks')
+        .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
         .send(goodParams)
         .expect(500)
         .end((err, res) => {
@@ -139,12 +152,22 @@ describe('API', () => {
       database.tasks.getTasks.returns(Promise.resolve(['happy', 'joy']))
 
       supertest(app)
-        .get('/api/accounts/1234/tasks')
+        .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
         .expect(200)
         .end((err, res) => {
           expect(res.body).to.not.be.empty
           expect(res.body).to.have.lengthOf(2)
-          sinon.assert.calledWithMatch(database.tasks.getTasks, {account: '1234'})
+          sinon.assert.calledWithMatch(database.tasks.getTasks, {account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91'})
+
+          done(err)
+        })
+    })
+    it('returns 422 when accounts is not a valid UUID', done => {
+      supertest(app)
+        .get('/api/accounts/1234/tasks')
+        .expect(422)
+        .end((err, res) => {
+          sinon.assert.notCalled(database.tasks.getTasks)
 
           done(err)
         })
@@ -156,12 +179,22 @@ describe('API', () => {
       database.machines.getMachines.returns(Promise.resolve(['happy', 'flow', 'forever']))
 
       supertest(app)
-        .get('/api/accounts/1234/machines')
+        .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/machines')
         .expect(200)
         .end((err, res) => {
           expect(res.body).to.not.be.empty
           expect(res.body).to.have.lengthOf(3)
-          sinon.assert.calledWithMatch(database.machines.getMachines, {account: '1234'})
+          sinon.assert.calledWithMatch(database.machines.getMachines, {account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91'})
+
+          done(err)
+        })
+    })
+    it('returns 422 when accounts is not a valid UUID', done => {
+      supertest(app)
+        .get('/api/accounts/1234/tasks')
+        .expect(422)
+        .end((err, res) => {
+          sinon.assert.notCalled(database.tasks.getTasks)
 
           done(err)
         })

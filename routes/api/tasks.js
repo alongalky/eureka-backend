@@ -36,14 +36,21 @@ const addTask = database => (req, res) => {
 }
 
 const getTasks = database => (req, res) =>
-  database.getTasks({
-    account: req.params.account_id,
-    key: req.key
-  }).then(allTasks => res.json(allTasks))
-    .catch(err => {
-      console.error(err)
-      return res.status(400)
-    })
+  req.getValidationResult().then(result => {
+    if (!result.isEmpty()) {
+      res.status(422).send('There have been validation errors: ' + util.inspect(result.array()))
+      return
+    }
+
+    database.getTasks({
+      account: req.params.account_id,
+      key: req.key
+    }).then(allTasks => res.json(allTasks))
+      .catch(err => {
+        console.error(err)
+        return res.status(400)
+      })
+  })
 
 module.exports = database => ({
   getTasks: getTasks(database),
