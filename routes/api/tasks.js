@@ -2,12 +2,11 @@ const util = require('util')
 
 const addTask = database => (req, res) => {
   // Validation
-  req.checkBody('command', 'Missing command').notEmpty()
-  req.checkBody('command', 'Command is not in array format').isArray()
-  req.checkBody('output', 'Missing output folder').notEmpty()
-  req.checkBody('machine', 'Missing machine').notEmpty()
-  req.checkBody('taskName', 'Missing taskName').notEmpty()
-  req.checkBody('tier', 'Missing tier').notEmpty()
+  req.checkBody('command', 'Expected command between 1 to 255 characters').notEmpty().isLength({min: 1, max: 255})
+  req.checkBody('output', 'Missing output folder').notEmpty().isLength({min: 1, max: 255})
+  req.checkBody('machine', 'Missing machine').notEmpty().isLength({min: 1, max: 255})
+  req.checkBody('taskName', 'Missing taskName').notEmpty().isLength({min: 1, max: 255})
+  req.checkBody('tier', 'Missing tier').notEmpty().isIn(['tiny'])
 
   req.getValidationResult().then(result => {
     if (!result.isEmpty()) {
@@ -16,7 +15,7 @@ const addTask = database => (req, res) => {
     }
 
     const params = {
-      command: req.body.command && req.body.command.join(' '),
+      command: req.body.command,
       output: req.body.output,
       machine: req.body.machine,
       key: req.key,
