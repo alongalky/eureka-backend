@@ -1,3 +1,6 @@
+const fs = require('fs')
+const config = require('./config/config')(fs, require)
+const appInsights = require('applicationinsights')
 const express = require('express')
 const app = express()
 const bodyParser = require('body-parser')
@@ -6,6 +9,9 @@ const expressValidator = require('express-validator')
 const machinesDatabase = require('./database/machines')
 const tasksDatabase = require('./database/tasks')
 const apiRouter = require('./routes/api')({machinesDatabase, tasksDatabase})
+
+// Set up Application Insights for logging requests
+appInsights.setup(config.applicationInsights.iKey).start()
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }))

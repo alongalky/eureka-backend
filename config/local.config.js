@@ -6,5 +6,8 @@ module.exports = {
     user: 'root',
     password: '',
     database: 'eureka_local'
+  },
+  applicationInsights: {
+    iKey: '32b8b06f-ff4a-4b04-b26d-4d9c4796b92a'
   }
 }

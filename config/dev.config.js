@@ -6,5 +6,8 @@ module.exports = {
     user: process.env.RDS_USERNAME,
     password: process.env.RDS_PASSWORD,
     database: process.env.RDS_DB_NAME
+  },
+  applicationInsights: {
+    iKey: process.env.APPINSIGHTS_INSTRUMENTATIONKEY
   }
 }
