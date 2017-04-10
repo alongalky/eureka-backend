@@ -10,7 +10,11 @@ const apiRouter = require('./routes/api')({machinesDatabase, tasksDatabase})
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
-app.use(expressValidator())
+app.use(expressValidator({
+  customValidators: {
+    isArray: Array.isArray
+  }
+}))
 // Request logging middleware
 app.use(morgan('tiny'))
 

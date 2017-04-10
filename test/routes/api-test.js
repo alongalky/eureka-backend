@@ -1,4 +1,6 @@
 const sinon = require('sinon')
+const sinonStubPromise = require('sinon-stub-promise')
+sinonStubPromise(sinon)
 const supertest = require('supertest')
 const apiRouter = require('../../routes/api')
 const express = require('express')
@@ -22,7 +24,11 @@ describe('API', () => {
     // Middleware
     app.use(bodyParser.urlencoded({ extended: true }))
     app.use(bodyParser.json())
-    app.use(expressValidator())
+    app.use(expressValidator({
+      customValidators: {
+        isArray: Array.isArray
+      }
+    }))
 
     // Route
     app.use('/api', apiRouter({
@@ -56,17 +62,108 @@ describe('API', () => {
   })
 
   describe('POST /tasks', () => {
-    it('POST /tasks returns 200 on happy flow', done => {
-      database.tasks.addTask.returns(Promise.resolve())
+    const goodParams = {
+      command: 'hello world',
+      machine: 'machina',
+      taskName: 'tasky',
+      tier: 'tiny',
+      output: '/output'
+    }
 
-      supertest(app)
-        .post('/api/accounts/1234/tasks')
-        .expect(200)
-        .end((err, res) => {
-          sinon.assert.calledWithMatch(database.tasks.addTask, {account: '1234'})
+    describe('Return codes', () => {
+      it('returns 200 on happy flow', done => {
+        database.tasks.addTask.returns(Promise.resolve())
 
-          done(err)
+        supertest(app)
+          .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks', goodParams)
+          .send(goodParams)
+          .expect(200)
+          .end((err, res) => {
+            sinon.assert.alwaysCalledWithMatch(database.tasks.addTask, {
+              command: 'hello world',
+              output: '/output',
+              machine: 'machina',
+              taskName: 'tasky',
+              tier: 'tiny',
+              account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91'
+            })
+
+            done(err)
+          })
+      })
+      it('returns 500 when database operation fails', done => {
+        database.tasks.addTask.rejects(new Error('Crazy database error'))
+
+        const oldError = console.error
+        console.error = () => { }
+        supertest(app)
+          .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .send(goodParams)
+          .expect(500)
+          .end((err, res) => {
+            sinon.assert.calledOnce(database.tasks.addTask)
+
+            console.error = oldError
+            done(err)
+          })
+      })
+    })
+
+    describe('Parameter verification', () => {
+      for (let prop of ['command', 'output', 'machine', 'taskName']) {
+        it(`returns 422 when ${prop} is too long`, done => {
+          const badParams = Object.assign({}, goodParams, { [prop]: 'h'.repeat(256) })
+
+          supertest(app)
+            .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks', {})
+            .send(badParams)
+            .expect(422)
+            .end((err, res) => {
+              sinon.assert.notCalled(database.tasks.addTask)
+
+              done(err)
+            })
         })
+        it(`returns 422 when ${prop} is empty`, done => {
+          const badParams = Object.assign({}, goodParams, { [prop]: undefined })
+
+          supertest(app)
+            .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks', {})
+            .send(badParams)
+            .expect(422)
+            .end((err, res) => {
+              sinon.assert.notCalled(database.tasks.addTask)
+
+              done(err)
+            })
+        })
+      }
+      it('returns 422 when accounts is not a valid UUID', done => {
+        const badParams = Object.assign({}, goodParams, { taskName: undefined })
+
+        supertest(app)
+          .post('/api/accounts/1234/tasks')
+          .send(badParams)
+          .expect(422)
+          .end((err, res) => {
+            sinon.assert.notCalled(database.tasks.addTask)
+
+            done(err)
+          })
+      })
+      it('returns 422 when tier is not "tiny"', done => {
+        const badParams = Object.assign({}, goodParams, { tier: 'something else' })
+
+        supertest(app)
+          .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .send(badParams)
+          .expect(422)
+          .end((err, res) => {
+            sinon.assert.notCalled(database.tasks.addTask)
+
+            done(err)
+          })
+      })
     })
   })
 
@@ -75,12 +172,22 @@ describe('API', () => {
       database.tasks.getTasks.returns(Promise.resolve(['happy', 'joy']))
 
       supertest(app)
-        .get('/api/accounts/1234/tasks')
+        .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
         .expect(200)
         .end((err, res) => {
           expect(res.body).to.not.be.empty
           expect(res.body).to.have.lengthOf(2)
-          sinon.assert.calledWithMatch(database.tasks.getTasks, {account: '1234'})
+          sinon.assert.calledWithMatch(database.tasks.getTasks, { account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91' })
+
+          done(err)
+        })
+    })
+    it('returns 422 when accounts is not a valid UUID', done => {
+      supertest(app)
+        .get('/api/accounts/1234/tasks')
+        .expect(422)
+        .end((err, res) => {
+          sinon.assert.notCalled(database.tasks.getTasks)
 
           done(err)
         })
@@ -92,12 +199,22 @@ describe('API', () => {
       database.machines.getMachines.returns(Promise.resolve(['happy', 'flow', 'forever']))
 
       supertest(app)
-        .get('/api/accounts/1234/machines')
+        .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/machines')
         .expect(200)
         .end((err, res) => {
           expect(res.body).to.not.be.empty
           expect(res.body).to.have.lengthOf(3)
-          sinon.assert.calledWithMatch(database.machines.getMachines, {account: '1234'})
+          sinon.assert.calledWithMatch(database.machines.getMachines, { account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91' })
+
+          done(err)
+        })
+    })
+    it('returns 422 when accounts is not a valid UUID', done => {
+      supertest(app)
+        .get('/api/accounts/1234/tasks')
+        .expect(422)
+        .end((err, res) => {
+          sinon.assert.notCalled(database.tasks.getTasks)
 
           done(err)
         })

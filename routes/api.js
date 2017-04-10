@@ -12,6 +12,12 @@ module.exports = ({machinesDatabase, tasksDatabase}) => {
 
   apiRouter.use('/accounts/:account_id', accountsRouter)
 
+  // Add account_id verification middleware
+  accountsRouter.use((req, res, next) => {
+    req.checkParams('account_id', 'Account ID must be a valid lower-case UUID').notEmpty().isUUID().isLowercase()
+    next()
+  })
+
   accountsRouter.post('/tasks', tasksApi.addTask)
   accountsRouter.get('/tasks', tasksApi.getTasks)
   accountsRouter.get('/machines', machinesApi.getMachines)
