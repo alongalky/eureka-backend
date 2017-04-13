@@ -71,13 +71,13 @@ describe('API', () => {
     }
 
     describe('Return codes', () => {
-      it('returns 200 on happy flow', done => {
+      it('returns 201 on happy flow', done => {
         database.tasks.addTask.returns(Promise.resolve())
 
         supertest(app)
           .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks', goodParams)
           .send(goodParams)
-          .expect(200)
+          .expect(201)
           .end((err, res) => {
             sinon.assert.alwaysCalledWithMatch(database.tasks.addTask, {
               command: 'hello world',
@@ -100,6 +100,24 @@ describe('API', () => {
           .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
           .send(goodParams)
           .expect(500)
+          .end((err, res) => {
+            sinon.assert.calledOnce(database.tasks.addTask)
+
+            console.error = oldError
+            done(err)
+          })
+      })
+      it('returns 404 when machine does not exists', done => {
+        const err = new Error(`Machine does not exist`)
+        err.type = 'machine_not_exists'
+        database.tasks.addTask.rejects(err)
+
+        const oldError = console.error
+        console.error = () => { }
+        supertest(app)
+          .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .send(goodParams)
+          .expect(404)
           .end((err, res) => {
             sinon.assert.calledOnce(database.tasks.addTask)
 
@@ -192,6 +210,20 @@ describe('API', () => {
           done(err)
         })
     })
+    it('returns 500 when database call fails', done => {
+      database.tasks.getTasks.rejects(new Error('Crazy database error'))
+
+      const oldError = console.error
+      console.error = () => { }
+      supertest(app)
+        .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+        .expect(500)
+        .end((err, res) => {
+          console.error = oldError
+
+          done(err)
+        })
+    })
   })
 
   describe('GET /machines', () => {
@@ -211,10 +243,24 @@ describe('API', () => {
     })
     it('returns 422 when accounts is not a valid UUID', done => {
       supertest(app)
-        .get('/api/accounts/1234/tasks')
+        .get('/api/accounts/1234/machines')
         .expect(422)
         .end((err, res) => {
           sinon.assert.notCalled(database.tasks.getTasks)
+
+          done(err)
+        })
+    })
+    it('returns 500 when database call fails', done => {
+      database.machines.getMachines.rejects(new Error('Crazy database error'))
+
+      const oldError = console.error
+      console.error = () => { }
+      supertest(app)
+        .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/machines')
+        .expect(500)
+        .end((err, res) => {
+          console.error = oldError
 
           done(err)
         })

@@ -29,7 +29,9 @@ module.exports = {
     return database().query(findMachineIdQuery, [machine, key.key, key.secret, account])
       .then(([rows, fields]) => {
         if (rows.length === 0) {
-          throw new Error(`Machine ${machine} does not exist`)
+          const err = new Error(`Machine ${machine} does not exist`)
+          err.type = 'machine_not_exists'
+          throw err
         } else {
           return database().query(insertTaskQuery, [uuid.v4(), taskName, 'Initializing', command, new Date(), tier, rows[0].machine_id])
             .then(([rows, fields]) => rows)

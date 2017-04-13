@@ -26,10 +26,14 @@ const addTask = database => (req, res) => {
 
     return database.addTask(params)
       .then(result => {
-        res.send({message: 'Task queued successfuly'})
+        res.status(201).send({message: 'Task queued successfuly'})
       }).catch(err => {
-        console.error(err)
-        res.status(500).send({message: 'Failed to add task'})
+        if (err.type === 'machine_not_exists') {
+          res.status(404).send('Machine not found')
+        } else {
+          console.error(err)
+          res.status(500).send('Failed to add task')
+        }
       })
   })
 }
@@ -47,7 +51,7 @@ const getTasks = database => (req, res) =>
     }).then(allTasks => res.json(allTasks))
       .catch(err => {
         console.error(err)
-        return res.status(400)
+        res.status(500).send('Failed to get tasks')
       })
   })
 

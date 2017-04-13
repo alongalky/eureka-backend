@@ -14,7 +14,7 @@ module.exports = database => {
           .then(allMachines => res.json(allMachines))
           .catch(err => {
             console.error(err)
-            return res.status(400)
+            res.status(500).send('Failed to get machines')
           })
       })
     }
