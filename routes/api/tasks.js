@@ -71,7 +71,7 @@ const getTasks = ({database, tiers}) => (req, res) =>
           throw new Error(`'Invalid tier found for task ${task.task_id}`)
         }
 
-        task.cost = tier.pricePerHourInCents * (task.durationInSeconds / (60.0 * 60.0))
+        task.costInCents = tier.pricePerHourInCents * (task.durationInSeconds / (60.0 * 60.0))
         return task
       }
 

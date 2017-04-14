@@ -230,7 +230,7 @@ describe('API', () => {
         .end((err, res) => {
           expect(res.body).to.have.length(1)
           expect(res.body[0].durationInSeconds).to.be.equal(120)
-          expect(res.body[0].cost).to.be.equal(2)
+          expect(res.body[0].costInCents).to.be.equal(2)
 
           done(err)
         })
@@ -251,7 +251,7 @@ describe('API', () => {
         .end((err, res) => {
           expect(res.body).to.have.length(1)
           expect(res.body[0].durationInSeconds).to.be.approximately(10 * 60, 2)
-          expect(res.body[0].cost).to.be.approximately(10, 1)
+          expect(res.body[0].costInCents).to.be.approximately(10, 1)
 
           done(err)
         })
