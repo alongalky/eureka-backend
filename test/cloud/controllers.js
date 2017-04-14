@@ -68,7 +68,6 @@ describe('Cloud controller', () => {
     it('transitions task to ERROR when fails to wait for instance RUNNING', (done) => {
       gZone.createVM.returns(Promise.resolve([gVm]))
       gVm.waitFor.rejects(new Error('waitFor API Error'))
-      gVm.waitFor.returns(Promise.resolve())
 
       googleController.runInstance('1234', {})
       .then(() => {

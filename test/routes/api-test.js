@@ -107,66 +107,6 @@ describe('API', () => {
             done(err)
           })
       })
-      it('returns 201 on happy flow, even if cloud API calls blow, transitions task to ERROR state', done => {
-        database.tasks.addTask.returns(Promise.resolve('1234'))
-        database.tasks.changeTaskStatus.returns(Promise.resolve())
-        cloud.runTask.returns(Promise.resolve())
-
-        supertest(app)
-          .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks', goodParams)
-          .send(goodParams)
-          .expect(201)
-          .end((err, res) => {
-            sinon.assert.alwaysCalledWithMatch(database.tasks.addTask, {
-              command: 'hello world',
-              output: '/output',
-              machine: 'machina',
-              taskName: 'tasky',
-              tier: 'tiny',
-              account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91'
-            })
-            sinon.assert.calledWithMatch(cloud.runTask, '1234', {
-              command: 'hello world',
-              output: '/output',
-              machine: 'machina',
-              taskName: 'tasky',
-              tier: 'tiny',
-              account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91'
-            })
-
-            done(err)
-          })
-      })
-      it('returns 201 on happy flow, even if cloud API calls blow and database changeTaskStatus blows', done => {
-        database.tasks.addTask.returns(Promise.resolve('1234'))
-        database.tasks.changeTaskStatus.rejects(new Error('Crazy database error'))
-        cloud.runTask.returns(Promise.resolve())
-
-        supertest(app)
-          .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks', goodParams)
-          .send(goodParams)
-          .expect(201)
-          .end((err, res) => {
-            sinon.assert.alwaysCalledWithMatch(database.tasks.addTask, {
-              command: 'hello world',
-              output: '/output',
-              machine: 'machina',
-              taskName: 'tasky',
-              tier: 'tiny',
-              account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91'
-            })
-            sinon.assert.calledWithMatch(cloud.runTask, '1234', {
-              command: 'hello world',
-              output: '/output',
-              machine: 'machina',
-              taskName: 'tasky',
-              tier: 'tiny',
-              account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91'
-            })
-
-            done(err)
-          })
-      })
       it('returns 500 when database operation fails', done => {
         database.tasks.addTask.rejects(new Error('Crazy database error'))
 
