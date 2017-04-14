@@ -33,7 +33,10 @@ describe('API', () => {
     // Route
     app.use('/api', apiRouter({
       machinesDatabase: database.machines,
-      tasksDatabase: database.tasks
+      tasksDatabase: database.tasks,
+      tiers: [{
+        name: 'tiny'
+      }]
     }))
   })
 

@@ -8,7 +8,7 @@ const morgan = require('morgan')
 const expressValidator = require('express-validator')
 const machinesDatabase = require('./database/machines')
 const tasksDatabase = require('./database/tasks')
-const apiRouter = require('./routes/api')({machinesDatabase, tasksDatabase})
+const apiRouter = require('./routes/api')({machinesDatabase, tasksDatabase, tiers: config.tiers})
 
 // Set up Application Insights for logging requests
 appInsights.setup(config.applicationInsights.iKey).start()

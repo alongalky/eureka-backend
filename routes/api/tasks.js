@@ -1,12 +1,13 @@
 const util = require('util')
 
-const addTask = database => (req, res) => {
+const addTask = ({database, tiers}) => (req, res) => {
   // Validation
   req.checkBody('command', 'Expected command between 1 to 255 characters').notEmpty().isLength({min: 1, max: 255})
   req.checkBody('output', 'Missing output folder').notEmpty().isLength({min: 1, max: 255})
   req.checkBody('machine', 'Missing machine').notEmpty().isLength({min: 1, max: 255})
   req.checkBody('taskName', 'Missing taskName').notEmpty().isLength({min: 1, max: 255})
-  req.checkBody('tier', 'Missing tier').notEmpty().isIn(['tiny'])
+  const tierNames = tiers.map(t => t.name)
+  req.checkBody('tier', `Incorrect tier: options are ${tierNames.join(', ')}`).notEmpty().isIn(tierNames)
 
   req.getValidationResult().then(result => {
     if (!result.isEmpty()) {
@@ -55,7 +56,7 @@ const getTasks = database => (req, res) =>
       })
   })
 
-module.exports = database => ({
+module.exports = ({database, tiers}) => ({
   getTasks: getTasks(database),
-  addTask: addTask(database)
+  addTask: addTask({database, tiers})
 })
