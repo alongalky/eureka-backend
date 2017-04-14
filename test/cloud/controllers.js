@@ -1,4 +1,6 @@
 const sinon = require('sinon')
+const sinonStubPromise = require('sinon-stub-promise')
+sinonStubPromise(sinon)
 
 describe('Cloud controller', () => {
   describe('Google Runner', () => {
@@ -12,9 +14,6 @@ describe('Cloud controller', () => {
       changeTaskStatusRunning: sinon.stub(),
       changeTaskStatus: sinon.stub()
     }
-    const cloud = {
-      startTask: sinon.stub()
-    }
     const gZone = {
       createVM: sinon.stub()
     }
@@ -26,22 +25,15 @@ describe('Cloud controller', () => {
       waitFor: sinon.stub()
     }
 
-    const googleRunInstance = require('../../cloud/google/runinstance')({ 
+    const googleController = require('../../cloud/google/controller')({
       config,
       database,
-      cloud,
       gce
     })
 
-    const oldLog = console.log
-    const oldError = console.error
-
     beforeEach(() => {
-      console.log = () => {}
-      console.error = () => {}
       database.changeTaskStatusRunning.reset()
       database.changeTaskStatus.reset()
-      cloud.startTask.reset()
       gZone.createVM.reset()
       gVm.waitFor.reset()
     })
@@ -51,10 +43,8 @@ describe('Cloud controller', () => {
       gVm.waitFor.returns(Promise.resolve())
       database.changeTaskStatusRunning.returns(Promise.resolve())
 
-      googleRunInstance('1234', {})
+      googleController.runInstance('1234', {})
       .then(() => {
-        console.log = oldLog
-        console.error = oldError
         // Checks if instance gets named correctly
         sinon.assert.calledWith(gZone.createVM, 'compute-1234', sinon.match.any)
         sinon.assert.notCalled(database.changeTaskStatus)
@@ -65,12 +55,10 @@ describe('Cloud controller', () => {
     })
 
     it('transitions task to ERROR when fails to create instance', done => {
-      gZone.createVM.returns(Promise.reject())
+      gZone.createVM.rejects(new Error('Crazy API Error'))
 
-      googleRunInstance('1234', {})
+      googleController.runInstance('1234', {})
       .then(() => {
-        console.log = oldLog
-        console.error = oldError
         sinon.assert.calledOnce(database.changeTaskStatus)
         sinon.assert.calledWithExactly(database.changeTaskStatus, '1234', 'Error')
         done()
@@ -79,12 +67,11 @@ describe('Cloud controller', () => {
 
     it('transitions task to ERROR when fails to wait for instance RUNNING', (done) => {
       gZone.createVM.returns(Promise.resolve([gVm]))
-      gVm.waitFor.returns(Promise.reject())
+      gVm.waitFor.rejects(new Error('waitFor API Error'))
+      gVm.waitFor.returns(Promise.resolve())
 
-      googleRunInstance('1234', {})
+      googleController.runInstance('1234', {})
       .then(() => {
-        console.log = oldLog
-        console.error = oldError
         sinon.assert.calledOnce(database.changeTaskStatus)
         sinon.assert.calledWithExactly(database.changeTaskStatus, '1234', 'Error')
         done()

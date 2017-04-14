@@ -1,11 +1,22 @@
-module.exports = ({ config, database, gce }) => ({
+const winston = require('winston')
+
+module.exports = ({ config, database, googleController }) => ({
   runTask: (taskId, params) => {
-    const cloud = require('./agnostic')({ config, database, gce })
-    const googleRunInstance = require('./google/runinstance')({ config, database, gce, cloud })
-    switch (config.cloud_provider) {
-      case 'google':
-      default:
-        return googleRunInstance(taskId, params)
+    const cloudDispatcher = () => {
+      switch (config.cloud_provider) {
+        case 'google':
+        default:
+          return googleController.runInstance(taskId, params)
+      }
     }
+    cloudDispatcher()
+      .catch(err => {
+        winston.error(err)
+        return database.changeTaskStatus(taskId, 'Error')
+      })
+      .catch(err => {
+        // TODO: post message to alerting service
+        winston.error('VM %s deployment failed but status could not be updated', taskId, err)
+      })
   }
 })

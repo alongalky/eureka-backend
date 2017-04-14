@@ -31,19 +31,13 @@ const addTask = ({ database, cloud, tiers }) => (req, res) => {
       res.status(201).send({message: 'Task queued successfuly'})
       // This call could fail against the API, but we return a 201 anyway.
       // Instance is transitioned to Error status in case of an API error.
-      return cloud.runTask(taskId, params)
-      .catch(err => {
-        winston.error(err)
-        return database.changeTaskStatus(taskId, 'Error')
-      })
+      cloud.runTask(taskId, params)
     }).catch(err => {
       if (err.type === 'machine_not_exists') {
         res.status(404).send('Machine not found')
       } else {
         winston.error(err)
-        if (!res.headersSent) {
-          res.status(500).send('Failed to add task')
-        }
+        res.status(500).send('Failed to add task')
       }
     })
   })
