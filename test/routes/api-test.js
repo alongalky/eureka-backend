@@ -8,6 +8,10 @@ const expect = require('chai').expect
 const bodyParser = require('body-parser')
 const expressValidator = require('express-validator')
 const moment = require('moment')
+const winston = require('winston')
+
+// Silence winston
+winston.configure({ transports: [] })
 
 describe('API', () => {
   const database = {
@@ -99,8 +103,6 @@ describe('API', () => {
       it('returns 500 when database operation fails', done => {
         database.tasks.addTask.rejects(new Error('Crazy database error'))
 
-        const oldError = console.error
-        console.error = () => { }
         supertest(app)
           .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
           .send(goodParams)
@@ -108,7 +110,6 @@ describe('API', () => {
           .end((err, res) => {
             sinon.assert.calledOnce(database.tasks.addTask)
 
-            console.error = oldError
             done(err)
           })
       })
@@ -117,8 +118,6 @@ describe('API', () => {
         err.type = 'machine_not_exists'
         database.tasks.addTask.rejects(err)
 
-        const oldError = console.error
-        console.error = () => { }
         supertest(app)
           .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
           .send(goodParams)
@@ -126,7 +125,6 @@ describe('API', () => {
           .end((err, res) => {
             sinon.assert.calledOnce(database.tasks.addTask)
 
-            console.error = oldError
             done(err)
           })
       })
@@ -269,16 +267,9 @@ describe('API', () => {
     it('returns 500 when database call fails', done => {
       database.tasks.getTasks.rejects(new Error('Crazy database error'))
 
-      const oldError = console.error
-      console.error = () => { }
       supertest(app)
         .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
-        .expect(500)
-        .end((err, res) => {
-          console.error = oldError
-
-          done(err)
-        })
+        .expect(500, done)
     })
   })
 
@@ -310,16 +301,9 @@ describe('API', () => {
     it('returns 500 when database call fails', done => {
       database.machines.getMachines.rejects(new Error('Crazy database error'))
 
-      const oldError = console.error
-      console.error = () => { }
       supertest(app)
         .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/machines')
-        .expect(500)
-        .end((err, res) => {
-          console.error = oldError
-
-          done(err)
-        })
+        .expect(500, done)
     })
   })
 })
