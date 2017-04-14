@@ -11,6 +11,23 @@ const fs = require('fs')
 const config = require('./config/config')(fs, require)
 const cloud = require('./cloud/agnostic')({config, database: tasksDatabase, gce})
 const apiRouter = require('./routes/api')({machinesDatabase, tasksDatabase, cloud, tiers: config.tiers})
+const winston = require('winston')
+const aiLogger = require('winston-azure-application-insights').AzureApplicationInsightsLogger
+
+// Set up logging through winston
+winston.configure({
+  transports: [
+    new (winston.transports.Console)({
+      formatter: (options) =>
+        new Date().toISOString() + ' ' + options.level.toUpperCase() + ' ' + (options.message || '')
+    })
+  ]
+})
+
+// Set up Application Insights winston transport
+winston.add(aiLogger, {
+  key: config.applicationInsights.iKey
+})
 
 // Set up Application Insights for logging requests
 appInsights.setup(config.applicationInsights.iKey).start()
@@ -39,4 +56,4 @@ var port = process.env.PORT || 8080
 app.use('/api', apiRouter)
 
 app.listen(port)
-console.log('Magic happens on port ' + port)
+winston.info('Magic happens on port ' + port)

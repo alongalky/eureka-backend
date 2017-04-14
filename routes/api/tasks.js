@@ -1,5 +1,6 @@
 const moment = require('moment')
 const util = require('util')
+const winston = require('winston')
 
 const addTask = ({ database, cloud, tiers }) => (req, res) => {
   // Validation
@@ -39,7 +40,7 @@ const addTask = ({ database, cloud, tiers }) => (req, res) => {
       if (err.type === 'machine_not_exists') {
         res.status(404).send('Machine not found')
       } else {
-        console.error(err)
+        winston.error(err)
         if (!res.headersSent) {
           res.status(500).send('Failed to add task')
         }
@@ -79,13 +80,13 @@ const getTasks = ({database, tiers}) => (req, res) =>
           throw new Error(`'Invalid tier found for task ${task.task_id}`)
         }
 
-        task.cost = tier.pricePerHourInCents * (task.durationInSeconds / (60.0 * 60.0))
+        task.costInCents = tier.pricePerHourInCents * (task.durationInSeconds / (60.0 * 60.0))
         return task
       }
 
       res.json(allTasks.map(addTaskDuration).map(addCost))
     }).catch(err => {
-      console.error(err)
+      winston.error(err)
       res.status(500).send('Failed to get tasks')
     })
   })
