@@ -112,8 +112,6 @@ describe('API', () => {
         database.tasks.changeTaskStatus.returns(Promise.resolve())
         cloud.runTask.rejects(new Error('Cloud API croaks'))
 
-        const oldError = console.error
-        console.error = () => { }
         supertest(app)
           .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks', goodParams)
           .send(goodParams)
@@ -137,7 +135,6 @@ describe('API', () => {
             })
             sinon.assert.calledWith(database.tasks.changeTaskStatus, '1234', 'Error')
 
-            console.error = oldError
             done(err)
           })
       })
@@ -146,8 +143,6 @@ describe('API', () => {
         database.tasks.changeTaskStatus.rejects(new Error('Crazy database error'))
         cloud.runTask.rejects(new Error('Cloud API croaks'))
 
-        const oldError = console.error
-        console.error = () => { }
         supertest(app)
           .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks', goodParams)
           .send(goodParams)
@@ -171,7 +166,6 @@ describe('API', () => {
             })
             sinon.assert.calledWith(database.tasks.changeTaskStatus, '1234', 'Error')
 
-            console.error = oldError
             done(err)
           })
       })

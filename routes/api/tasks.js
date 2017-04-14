@@ -33,7 +33,7 @@ const addTask = ({ database, cloud, tiers }) => (req, res) => {
       // Instance is transitioned to Error status in case of an API error.
       return cloud.runTask(taskId, params)
       .catch(err => {
-        console.error(err)
+        winston.error(err)
         return database.changeTaskStatus(taskId, 'Error')
       })
     }).catch(err => {
