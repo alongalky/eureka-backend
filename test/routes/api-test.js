@@ -16,11 +16,12 @@ describe('API', () => {
     },
     tasks: {
       addTask: sinon.stub(),
-      getTasks: sinon.stub()
+      getTasks: sinon.stub(),
+      changeTaskStatus: sinon.stub()
     }
   }
   const cloud = {
-    runInstance: sinon.stub(),
+    runTask: sinon.stub()
   }
   const app = express()
 
@@ -50,6 +51,7 @@ describe('API', () => {
     database.machines.getMachines.reset()
     database.tasks.getTasks.reset()
     database.tasks.addTask.reset()
+    cloud.runTask.reset()
   })
 
   describe('GET /health-check', () => {
@@ -82,6 +84,7 @@ describe('API', () => {
     describe('Return codes', () => {
       it('returns 201 on happy flow', done => {
         database.tasks.addTask.returns(Promise.resolve())
+        cloud.runTask.returns(Promise.resolve())
 
         supertest(app)
           .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks', goodParams)
@@ -97,6 +100,74 @@ describe('API', () => {
               account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91'
             })
 
+            done(err)
+          })
+      })
+      it('returns 201 on happy flow, even if cloud API calls blow, transitions task to ERROR state', done => {
+        database.tasks.addTask.returns(Promise.resolve('1234'))
+        database.tasks.changeTaskStatus.returns(Promise.resolve())
+        cloud.runTask.rejects(new Error('Cloud API croaks'))
+
+        const oldError = console.error
+        console.error = () => { }
+        supertest(app)
+          .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks', goodParams)
+          .send(goodParams)
+          .expect(201)
+          .end((err, res) => {
+            sinon.assert.alwaysCalledWithMatch(database.tasks.addTask, {
+              command: 'hello world',
+              output: '/output',
+              machine: 'machina',
+              taskName: 'tasky',
+              tier: 'tiny',
+              account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91'
+            })
+            sinon.assert.calledWithMatch(cloud.runTask, '1234', {
+              command: 'hello world',
+              output: '/output',
+              machine: 'machina',
+              taskName: 'tasky',
+              tier: 'tiny',
+              account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91'
+            })
+            sinon.assert.calledWith(database.tasks.changeTaskStatus, '1234', 'Error')
+
+            console.error = oldError
+            done(err)
+          })
+      })
+      it('returns 201 on happy flow, even if cloud API calls blow and database changeTaskStatus blows', done => {
+        database.tasks.addTask.returns(Promise.resolve('1234'))
+        database.tasks.changeTaskStatus.rejects(new Error('Crazy database error'))
+        cloud.runTask.rejects(new Error('Cloud API croaks'))
+
+        const oldError = console.error
+        console.error = () => { }
+        supertest(app)
+          .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks', goodParams)
+          .send(goodParams)
+          .expect(201)
+          .end((err, res) => {
+            sinon.assert.alwaysCalledWithMatch(database.tasks.addTask, {
+              command: 'hello world',
+              output: '/output',
+              machine: 'machina',
+              taskName: 'tasky',
+              tier: 'tiny',
+              account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91'
+            })
+            sinon.assert.calledWithMatch(cloud.runTask, '1234', {
+              command: 'hello world',
+              output: '/output',
+              machine: 'machina',
+              taskName: 'tasky',
+              tier: 'tiny',
+              account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91'
+            })
+            sinon.assert.calledWith(database.tasks.changeTaskStatus, '1234', 'Error')
+
+            console.error = oldError
             done(err)
           })
       })

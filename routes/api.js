@@ -22,7 +22,7 @@ module.exports = ({machinesDatabase, tasksDatabase, cloud, tiers}) => {
     next()
   })
 
-  accountsRouter.post('/tasks', tasksApi.addTasks)
+  accountsRouter.post('/tasks', tasksApi.addTask)
   accountsRouter.get('/tasks', tasksApi.getTasks)
   accountsRouter.get('/machines', machinesApi.getMachines)
 

@@ -47,11 +47,10 @@ const changeTaskStatus = (taskId, status) => {
 }
 
 const changeTaskStatusRunning = taskId => {
-  const changeTaskReadyTimestampQuery =
-    'UPDATE tasks SET timestamp_ready = ? WHERE task_id = ?'
+  const changeTaskRunningTimestampQuery =
+    'UPDATE tasks SET status = ?, timestamp_ready = ? WHERE task_id = ?'
 
-  return database().query(changeTaskReadyTimestampQuery, [new Date(), taskId])
-    .then(() => changeTaskStatus(taskId, 'Running'))
+  return database().query(changeTaskRunningTimestampQuery, ['Running', new Date(), taskId])
 }
 
 module.exports = {

@@ -1,3 +1,5 @@
+const gce = require('@google-cloud/compute')()
+
 // To be removed
 function killInstance(vm) {
   vm.delete()
