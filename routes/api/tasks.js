@@ -1,3 +1,4 @@
+const moment = require('moment')
 const util = require('util')
 
 const addTask = ({database, tiers}) => (req, res) => {
@@ -39,7 +40,7 @@ const addTask = ({database, tiers}) => (req, res) => {
   })
 }
 
-const getTasks = database => (req, res) =>
+const getTasks = ({database, tiers}) => (req, res) =>
   req.getValidationResult().then(result => {
     if (!result.isEmpty()) {
       res.status(422).send('There have been validation errors: ' + util.inspect(result.array()))
@@ -49,14 +50,39 @@ const getTasks = database => (req, res) =>
     database.getTasks({
       account: req.params.account_id,
       key: req.key
-    }).then(allTasks => res.json(allTasks))
-      .catch(err => {
-        console.error(err)
-        res.status(500).send('Failed to get tasks')
-      })
+    }).then(allTasks => {
+      const addTaskDuration = task => {
+        const start = moment(task.timestamp_start)
+
+        let end
+        if (task.timestamp_done) {
+          end = moment(task.timestamp_done)
+        } else {
+          end = moment()
+        }
+
+        task.durationInSeconds = end.diff(start, 'seconds')
+        return task
+      }
+
+      const addCost = task => {
+        const tier = tiers.find(t => t.name === task.tier)
+        if (!tier) {
+          throw new Error(`'Invalid tier found for task ${task.task_id}`)
+        }
+
+        task.cost = tier.pricePerHourInCents * (task.durationInSeconds / (60.0 * 60.0))
+        return task
+      }
+
+      res.json(allTasks.map(addTaskDuration).map(addCost))
+    }).catch(err => {
+      console.error(err)
+      res.status(500).send('Failed to get tasks')
+    })
   })
 
 module.exports = ({database, tiers}) => ({
-  getTasks: getTasks(database),
+  getTasks: getTasks({database, tiers}),
   addTask: addTask({database, tiers})
 })

@@ -4,7 +4,7 @@ const uuid = require('uuid')
 module.exports = {
   getTasks: ({key, account}) => {
     const query =
-      'SELECT tasks.name, tasks.command, tasks.status, machines.name AS machine, tasks.tier, tasks.timestamp_start ' +
+      'SELECT tasks.name, tasks.command, tasks.status, machines.name AS machine, tasks.tier, tasks.timestamp_start, tasks.timestamp_done ' +
       'FROM accounts ' +
       'INNER JOIN machines ON accounts.account_id = machines.account_id ' +
       'INNER JOIN tasks ON tasks.machine_id = machines.machine_id ' +

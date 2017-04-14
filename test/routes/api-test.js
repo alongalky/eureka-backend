@@ -7,6 +7,7 @@ const express = require('express')
 const expect = require('chai').expect
 const bodyParser = require('body-parser')
 const expressValidator = require('express-validator')
+const moment = require('moment')
 
 describe('API', () => {
   const database = {
@@ -35,7 +36,8 @@ describe('API', () => {
       machinesDatabase: database.machines,
       tasksDatabase: database.tasks,
       tiers: [{
-        name: 'tiny'
+        name: 'tiny',
+        pricePerHourInCents: 60
       }]
     }))
   })
@@ -189,8 +191,15 @@ describe('API', () => {
   })
 
   describe('GET /tasks', () => {
-    it('GET /tasks returns 200 on happy flow', done => {
-      database.tasks.getTasks.returns(Promise.resolve(['happy', 'joy']))
+    it('returns 200 on happy flow', done => {
+      database.tasks.getTasks.returns(Promise.resolve([
+        {
+          tier: 'tiny'
+        },
+        {
+          tier: 'tiny'
+        }
+      ]))
 
       supertest(app)
         .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
@@ -199,6 +208,50 @@ describe('API', () => {
           expect(res.body).to.not.be.empty
           expect(res.body).to.have.lengthOf(2)
           sinon.assert.calledWithMatch(database.tasks.getTasks, { account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91' })
+
+          done(err)
+        })
+    })
+    it('calculates duration & cost correctly when task has timestamp_done', done => {
+      const start = moment()
+      const end = moment().add(2, 'minute')
+
+      database.tasks.getTasks.returns(Promise.resolve([
+        {
+          tier: 'tiny',
+          timestamp_start: start.toDate(),
+          timestamp_done: end.toDate()
+        }
+      ]))
+
+      supertest(app)
+        .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+        .expect(200)
+        .end((err, res) => {
+          expect(res.body).to.have.length(1)
+          expect(res.body[0].durationInSeconds).to.be.equal(120)
+          expect(res.body[0].cost).to.be.equal(2)
+
+          done(err)
+        })
+    })
+    it('calculates duration & cost correctly when task does not have timestamp_done', done => {
+      const start = moment().subtract(10, 'minutes')
+
+      database.tasks.getTasks.returns(Promise.resolve([
+        {
+          tier: 'tiny',
+          timestamp_start: start.toDate()
+        }
+      ]))
+
+      supertest(app)
+        .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+        .expect(200)
+        .end((err, res) => {
+          expect(res.body).to.have.length(1)
+          expect(res.body[0].durationInSeconds).to.be.approximately(10 * 60, 2)
+          expect(res.body[0].cost).to.be.approximately(10, 1)
 
           done(err)
         })
