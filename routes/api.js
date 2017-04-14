@@ -2,10 +2,11 @@ const express = require('express')
 const apiRouter = express.Router()
 const accountsRouter = express.Router({mergeParams: true})
 
-module.exports = ({machinesDatabase, tasksDatabase, tiers}) => {
+module.exports = ({machinesDatabase, tasksDatabase, cloud, tiers}) => {
   const machinesApi = require('./api/machines')(machinesDatabase)
   const tasksApi = require('./api/tasks')({
     database: tasksDatabase,
+    cloud,
     tiers
   })
 
@@ -21,7 +22,7 @@ module.exports = ({machinesDatabase, tasksDatabase, tiers}) => {
     next()
   })
 
-  accountsRouter.post('/tasks', tasksApi.addTask)
+  accountsRouter.post('/tasks', tasksApi.addTasks)
   accountsRouter.get('/tasks', tasksApi.getTasks)
   accountsRouter.get('/machines', machinesApi.getMachines)
 

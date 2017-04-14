@@ -19,6 +19,9 @@ describe('API', () => {
       getTasks: sinon.stub()
     }
   }
+  const cloud = {
+    runInstance: sinon.stub(),
+  }
   const app = express()
 
   before(() => {
@@ -35,6 +38,7 @@ describe('API', () => {
     app.use('/api', apiRouter({
       machinesDatabase: database.machines,
       tasksDatabase: database.tasks,
+      cloud,
       tiers: [{
         name: 'tiny',
         pricePerHourInCents: 60

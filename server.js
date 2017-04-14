@@ -1,5 +1,3 @@
-const fs = require('fs')
-const config = require('./config/config')(fs, require)
 const appInsights = require('applicationinsights')
 const express = require('express')
 const app = express()
@@ -8,7 +6,11 @@ const morgan = require('morgan')
 const expressValidator = require('express-validator')
 const machinesDatabase = require('./database/machines')
 const tasksDatabase = require('./database/tasks')
-const apiRouter = require('./routes/api')({machinesDatabase, tasksDatabase, tiers: config.tiers})
+const gce = require('@google-cloud/compute')()
+const fs = require('fs')
+const config = require('./config/config')(fs, require)
+const cloud = require('./cloud/agnostic')({config, database: tasksDatabase, gce})
+const apiRouter = require('./routes/api')({machinesDatabase, tasksDatabase, cloud, tiers: config.tiers})
 
 // Set up Application Insights for logging requests
 appInsights.setup(config.applicationInsights.iKey).start()
@@ -27,9 +29,7 @@ app.use(morgan('tiny'))
 // Our authentication middleware
 app.use((req, res, next) => {
   const authHeader = req.get('Authentication')
-  const keyFields = authHeader ? authHeader.trim().split(':') : ['', '']
-  const key = keyFields[0]
-  const secret = keyFields[1]
+  const [key, secret] = authHeader ? authHeader.trim().split(':') : ['', '']
   req.key = {key, secret}
   next()
 })
