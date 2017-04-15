@@ -1,5 +1,5 @@
 const util = require('util')
-const winston = require('winston')
+const console = require('console')
 
 module.exports = database => {
   return {
@@ -14,7 +14,7 @@ module.exports = database => {
         return database.getMachines({account, key: req.key})
           .then(allMachines => res.json(allMachines))
           .catch(err => {
-            winston.error(err)
+            console.error(err)
             res.status(500).send('Failed to get machines')
           })
       })
