@@ -40,23 +40,39 @@ const addTask = ({command, output, machine, key, taskName, tier, account}) => {
     })
 }
 
-const changeTaskStatus = (taskId, status) => {
+const changeTaskStatusError = taskId => {
   const changeTaskStatusQuery =
-    'UPDATE tasks SET status = ? WHERE task_id = ?'
+    'UPDATE tasks SET status = "Error" WHERE task_id = ?'
 
-  return database().query(changeTaskStatusQuery, [status, taskId])
+  return database().query(changeTaskStatusQuery, [taskId])
 }
 
 const changeTaskStatusRunning = taskId => {
   const changeTaskRunningTimestampQuery =
-    'UPDATE tasks SET status = ?, timestamp_running = ? WHERE task_id = ?'
+    'UPDATE tasks SET status = "Running", timestamp_running = ? WHERE task_id = ?'
 
-  return database().query(changeTaskRunningTimestampQuery, ['Running', new Date(), taskId])
+  return database().query(changeTaskRunningTimestampQuery, [new Date(), taskId])
+}
+
+const changeTaskStatusInitializing = taskId => {
+  const changeTaskInitializingTimestampQuery =
+    'UPDATE tasks SET status = "Initializing", timestamp_initializing = ? WHERE task_id = ?'
+
+  return database().query(changeTaskInitializingTimestampQuery, [new Date(), taskId])
+}
+
+const changeTaskStatusDone = taskId => {
+  const changeTaskDoneTimestampQuery =
+    'UPDATE tasks SET status = "Done", timestamp_done = ? WHERE task_id = ?'
+
+  return database().query(changeTaskDoneTimestampQuery, [new Date(), taskId])
 }
 
 module.exports = {
   getTasks,
   addTask,
-  changeTaskStatus,
-  changeTaskStatusRunning
+  changeTaskStatusInitializing,
+  changeTaskStatusRunning,
+  changeTaskStatusDone,
+  changeTaskStatusError
 }

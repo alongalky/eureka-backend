@@ -22,8 +22,8 @@ const tasksDatabase = require('./database/tasks')
 const gce = require('@google-cloud/compute')()
 const Dockerode = require('dockerode')
 const googleController = require('./cloud/google/controller')({ config, gce })
-const cloud = require('./cloud/agnostic')({config, database: tasksDatabase, Dockerode, controllers: [googleController]})
-const apiRouter = require('./routes/api')({machinesDatabase, tasksDatabase, cloud, tiers: config.tiers})
+const cloud = require('./cloud/agnostic')({ config, database: tasksDatabase, Dockerode, controllers: [googleController], delayFactorInMs: 1000 })
+const apiRouter = require('./routes/api')({ machinesDatabase, tasksDatabase, cloud, tiers: config.tiers })
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }))
