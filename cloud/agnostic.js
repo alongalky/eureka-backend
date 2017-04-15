@@ -21,7 +21,7 @@ module.exports = ({ config, database, Dockerode, controllers }) => ({
         return database.changeTaskStatus(taskId, 'Error')
       })
       .catch(err => {
-        // TODO: post message to alerting service
+        // TODO: Alert
         console.error('Task %s deployment failed but status could not be updated', taskId, err)
       })
   }
