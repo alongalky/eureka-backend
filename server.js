@@ -17,23 +17,7 @@ const gce = require('@google-cloud/compute')()
 const googleController = require('./cloud/google/controller')({ config, database: tasksDatabase, gce })
 const cloud = require('./cloud/agnostic')({config, database: tasksDatabase, googleController})
 const apiRouter = require('./routes/api')({machinesDatabase, tasksDatabase, cloud, tiers: config.tiers})
-const winston = require('winston')
-const aiLogger = require('winston-azure-application-insights').AzureApplicationInsightsLogger
-
-// Set up logging through winston
-winston.configure({
-  transports: [
-    new (winston.transports.Console)({
-      formatter: (options) =>
-        new Date().toISOString() + ' ' + options.level.toUpperCase() + ' ' + (options.message || '')
-    })
-  ]
-})
-
-// Set up Application Insights winston transport
-winston.add(aiLogger, {
-  key: config.applicationInsights.iKey
-})
+const logger = require('./logger/logger')()
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }))
@@ -67,4 +51,4 @@ app.use('/api', (req, res, next) => {
 app.use('/api', apiRouter)
 
 app.listen(port)
-winston.info('Magic happens on port ' + port)
+logger.info('Magic happens on port ' + port)

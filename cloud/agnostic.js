@@ -1,4 +1,4 @@
-const winston = require('winston')
+const logger = require('../logger/logger')()
 
 module.exports = ({ config, database, googleController }) => ({
   runTask: (taskId, params) => {
@@ -11,12 +11,12 @@ module.exports = ({ config, database, googleController }) => ({
     }
     cloudDispatcher()
       .catch(err => {
-        winston.error(err)
+        logger.error(err)
         return database.changeTaskStatus(taskId, 'Error')
       })
       .catch(err => {
         // TODO: post message to alerting service
-        winston.error('VM %s deployment failed but status could not be updated', taskId, err)
+        logger.error('VM %s deployment failed but status could not be updated', taskId, err)
       })
   }
 })

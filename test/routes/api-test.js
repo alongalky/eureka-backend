@@ -1,3 +1,5 @@
+const logger = require('../../logger/logger')
+logger.silence = true
 const sinon = require('sinon')
 const sinonStubPromise = require('sinon-stub-promise')
 sinonStubPromise(sinon)
@@ -8,10 +10,6 @@ const expect = require('chai').expect
 const bodyParser = require('body-parser')
 const expressValidator = require('express-validator')
 const moment = require('moment')
-const winston = require('winston')
-
-// Silence winston
-winston.configure({ transports: [] })
 
 describe('API', () => {
   const database = {
@@ -52,6 +50,7 @@ describe('API', () => {
   })
 
   beforeEach(() => {
+    logger.silence = true
     database.machines.getMachines.reset()
     database.tasks.getTasks.reset()
     database.tasks.addTask.reset()
