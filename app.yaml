@@ -1,6 +1,6 @@
 runtime: nodejs
 env: flex
-service: eureka-api
+service: default
 env_variables:
   APPINSIGHTS_INSTRUMENTATIONKEY: 20f0c386-44e4-4eea-97be-2644299652e5
   EUREKA_ENV: dev
@@ -9,3 +9,12 @@ beta_settings:
   # 'gcloud beta sql instances describe [INSTANCE_NAME]' or from
   # the Instance details page in the Google Cloud Platform Console.
   cloud_sql_instances: dotted-vim-164110:us-east1:eureka-dev
+
+# Disable auto-scale
+instance_class: B1
+manual_scaling:
+  instances: 1
+
+# Disable health checks
+health_check:
+  enable_health_check: False
