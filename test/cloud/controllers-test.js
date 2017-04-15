@@ -1,3 +1,5 @@
+const logger = require('../../logger/logger')
+logger.silence = true
 const sinon = require('sinon')
 const sinonStubPromise = require('sinon-stub-promise')
 sinonStubPromise(sinon)

@@ -1,5 +1,5 @@
+const logger = require('../logger/logger')()
 module.exports = ({ config, database, Dockerode, controllers }) => ({
-
   runTask: (taskId, params) => {
     const controller = controllers.find(c => c.controls === config.cloud_provider)
     controller.runInstance(taskId, params)
@@ -17,12 +17,12 @@ module.exports = ({ config, database, Dockerode, controllers }) => ({
           .catch(() => setTimeout(() => docker.run('busybox:latest', 'wget ester.hackon.eu:9999'.split(' ')), 5000))
       })
       .catch(err => {
-        console.error('Error starting task', taskId, err)
+        logger.error('Error starting task', taskId, err)
         return database.changeTaskStatus(taskId, 'Error')
       })
       .catch(err => {
         // TODO: Alert
-        console.error('Task %s deployment failed but status could not be updated', taskId, err)
+        logger.error('Task %s deployment failed but status could not be updated', taskId, err)
       })
   }
 

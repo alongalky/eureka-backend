@@ -1,11 +1,12 @@
+const logger = require('../../logger/logger')()
 // To be removed
 function killInstance (vm) {
   vm.delete()
   .then(() => {
-    console.info('Terminated instance %s', vm.name)
+    logger.info('Terminated instance %s', vm.name)
   })
   .catch(err => {
-    console.error('Error terminating instance %s', vm.name, err)
+    logger.error('Error terminating instance %s', vm.name, err)
   })
 }
 
@@ -61,24 +62,24 @@ module.exports = ({ config, gce }) => ({
 
     return gZone.createVM(vmName, instanceConfig)
       .then(([vm, operation, apiResponse]) => {
-        console.info('VM compute-%s starting', taskId)
+        logger.info('VM compute-%s starting', taskId)
         // To be removed: Kill instance after 3 minutes
         setTimeout(() => killInstance(vm), 60000 * 3)
         return vm.waitFor('RUNNING')
       })
       .then(([vmMetadata]) => {
-        console.info('VM compute-%s started', taskId)
+        logger.info('VM compute-%s started', taskId)
         return {
           ip: vmMetadata.networkInterfaces[0].accessConfigs[0].natIP
         }
       })
       .catch(err => {
-        console.error('Error starting VM for task %s, terminating', taskId, err)
+        logger.error('Error starting VM for task', taskId, err)
         return gZone.vm(vmName).delete()
       })
       .catch(err => {
         // TODO: Alert
-        console.error('Impossible to remove failed VM compute-%s', taskId, err)
+        logger.error('Impossible to remove failed VM compute-%s', taskId, err)
       })
   }
 })
