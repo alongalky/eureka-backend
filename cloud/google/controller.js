@@ -1,13 +1,13 @@
 const winston = require('winston')
 
 // To be removed
-function killInstance(vm) {
+function killInstance (vm) {
   vm.delete()
   .then(() => {
-    winston.log("Terminated instance %s", vm.name)
+    winston.log('Terminated instance %s', vm.name)
   })
   .catch(err => {
-    winston.error("Error terminating instance %s", vm.name, err)
+    winston.error('Error terminating instance %s', vm.name, err)
   })
 }
 
