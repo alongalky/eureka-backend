@@ -1,5 +1,4 @@
 const util = require('util')
-const console = require('console')
 
 module.exports = database => {
   return {

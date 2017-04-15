@@ -1,6 +1,5 @@
 const moment = require('moment')
 const util = require('util')
-const console = require('console')
 
 const addTask = ({ database, cloud, tiers }) => (req, res) => {
   // Validation
