@@ -20,8 +20,12 @@ describe('API', () => {
     },
     tasks: {
       addTask: sinon.stub(),
-      getTasks: sinon.stub()
+      getTasks: sinon.stub(),
+      changeTaskStatus: sinon.stub()
     }
+  }
+  const cloud = {
+    runTask: sinon.stub()
   }
   const app = express()
 
@@ -39,6 +43,7 @@ describe('API', () => {
     app.use('/api', apiRouter({
       machinesDatabase: database.machines,
       tasksDatabase: database.tasks,
+      cloud,
       tiers: [{
         name: 'tiny',
         pricePerHourInCents: 60
@@ -50,6 +55,7 @@ describe('API', () => {
     database.machines.getMachines.reset()
     database.tasks.getTasks.reset()
     database.tasks.addTask.reset()
+    cloud.runTask.reset()
   })
 
   describe('GET /health-check', () => {
@@ -82,6 +88,7 @@ describe('API', () => {
     describe('Return codes', () => {
       it('returns 201 on happy flow', done => {
         database.tasks.addTask.returns(Promise.resolve())
+        cloud.runTask.returns(Promise.resolve())
 
         supertest(app)
           .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks', goodParams)

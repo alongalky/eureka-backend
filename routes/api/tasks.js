@@ -2,7 +2,7 @@ const moment = require('moment')
 const util = require('util')
 const winston = require('winston')
 
-const addTask = ({database, tiers}) => (req, res) => {
+const addTask = ({ database, cloud, tiers }) => (req, res) => {
   // Validation
   req.checkBody('command', 'Expected command between 1 to 255 characters').notEmpty().isLength({min: 1, max: 255})
   req.checkBody('output', 'Missing output folder').notEmpty().isLength({min: 1, max: 255})
@@ -13,8 +13,7 @@ const addTask = ({database, tiers}) => (req, res) => {
 
   req.getValidationResult().then(result => {
     if (!result.isEmpty()) {
-      res.status(422).send('There have been validation errors: ' + util.inspect(result.array()))
-      return
+      return res.status(422).send('There have been validation errors: ' + util.inspect(result.array()))
     }
 
     const params = {
@@ -27,17 +26,20 @@ const addTask = ({database, tiers}) => (req, res) => {
       account: req.params.account_id
     }
 
-    return database.addTask(params)
-      .then(result => {
-        res.status(201).send({message: 'Task queued successfuly'})
-      }).catch(err => {
-        if (err.type === 'machine_not_exists') {
-          res.status(404).send('Machine not found')
-        } else {
-          winston.error(err)
-          res.status(500).send('Failed to add task')
-        }
-      })
+    database.addTask(params)
+    .then(taskId => {
+      res.status(201).send({message: 'Task queued successfuly'})
+      // This call could fail against the API, but we return a 201 anyway.
+      // Instance is transitioned to Error status in case of an API error.
+      cloud.runTask(taskId, params)
+    }).catch(err => {
+      if (err.type === 'machine_not_exists') {
+        res.status(404).send('Machine not found')
+      } else {
+        winston.error(err)
+        res.status(500).send('Failed to add task')
+      }
+    })
   })
 }
 
@@ -83,7 +85,7 @@ const getTasks = ({database, tiers}) => (req, res) =>
     })
   })
 
-module.exports = ({database, tiers}) => ({
-  getTasks: getTasks({database, tiers}),
-  addTask: addTask({database, tiers})
+module.exports = ({database, cloud, tiers}) => ({
+  addTask: addTask({ database, cloud, tiers }),
+  getTasks: getTasks({ database, tiers })
 })

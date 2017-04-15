@@ -1,6 +1,10 @@
 module.exports = {
+  cloud_provider: 'google',
   aws: {
     region: 'us-west-2'
+  },
+  google: {
+    region: 'us-east1-b'
   },
   tiers: [
     {
