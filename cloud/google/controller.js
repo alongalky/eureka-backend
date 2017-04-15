@@ -1,13 +1,13 @@
-const winston = require('winston')
+const logger = require('../../logger/logger')()
 
 // To be removed
 function killInstance (vm) {
   vm.delete()
   .then(() => {
-    winston.log('Terminated instance %s', vm.name)
+    logger.info('Terminated instance %s', vm.name)
   })
   .catch(err => {
-    winston.error('Error terminating instance %s', vm.name, err)
+    logger.error('Error terminating instance %s', vm.name, err)
   })
 }
 
@@ -24,17 +24,17 @@ module.exports = ({ config, database, gce }) => ({
     }
     return gZone.createVM([ 'compute', taskId ].join('-'), instanceConfig)
     .then(([vm, operation, apiResponse]) => {
-      winston.log('VM compute-%s starting', taskId)
+      logger.info('VM compute-%s starting', taskId)
       // To be removed: Kill instance after 1 minute
       setTimeout(() => killInstance(vm), 60000)
       return vm.waitFor('RUNNING')
     })
     .then(() => {
-      winston.log('VM compute-%s started', taskId)
+      logger.info('VM compute-%s started', taskId)
       return database.changeTaskStatusRunning(taskId)
     })
     .catch(err => {
-      winston.error('Error starting VM for task', taskId, err)
+      logger.error('Error starting VM for task', taskId, err)
       return database.changeTaskStatus(taskId, 'Error')
     })
   }

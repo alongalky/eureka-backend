@@ -1,6 +1,6 @@
 const moment = require('moment')
 const util = require('util')
-const winston = require('winston')
+const logger = require('../../logger/logger')()
 
 const addTask = ({ database, cloud, tiers }) => (req, res) => {
   // Validation
@@ -36,7 +36,7 @@ const addTask = ({ database, cloud, tiers }) => (req, res) => {
       if (err.type === 'machine_not_exists') {
         res.status(404).send('Machine not found')
       } else {
-        winston.error(err)
+        logger.error(err)
         res.status(500).send('Failed to add task')
       }
     })
@@ -80,7 +80,7 @@ const getTasks = ({database, tiers}) => (req, res) =>
 
       res.json(allTasks.map(addTaskDuration).map(addCost))
     }).catch(err => {
-      winston.error(err)
+      logger.error(err)
       res.status(500).send('Failed to get tasks')
     })
   })
