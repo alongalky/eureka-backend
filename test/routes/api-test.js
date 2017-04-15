@@ -18,7 +18,11 @@ describe('API', () => {
     },
     tasks: {
       addTask: sinon.stub(),
-      getTasks: sinon.stub()
+      getTasks: sinon.stub(),
+      changeTaskStatus: sinon.stub()
+    },
+    accounts: {
+      getAccount: sinon.stub()
     }
   }
   const cloud = {
@@ -38,6 +42,7 @@ describe('API', () => {
 
     // Route
     app.use('/api', apiRouter({
+      accountsDatabase: database.accounts,
       machinesDatabase: database.machines,
       tasksDatabase: database.tasks,
       cloud,
@@ -53,6 +58,7 @@ describe('API', () => {
     database.machines.getMachines.reset()
     database.tasks.getTasks.reset()
     database.tasks.addTask.reset()
+    database.accounts.getAccount.reset()
     cloud.runTask.reset()
   })
 
@@ -83,11 +89,17 @@ describe('API', () => {
       output: '/output'
     }
 
+    beforeEach(() => {
+      database.tasks.addTask.resolves()
+      database.tasks.getTasks.resolves([])
+      database.accounts.getAccount.resolves({
+        spending_quota: 100000
+      })
+      cloud.runTask.returns(Promise.resolve())
+    })
+
     describe('Return codes', () => {
       it('returns 201 on happy flow', done => {
-        database.tasks.addTask.returns(Promise.resolve())
-        cloud.runTask.returns(Promise.resolve())
-
         supertest(app)
           .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks', goodParams)
           .send(goodParams)
@@ -105,7 +117,7 @@ describe('API', () => {
             done(err)
           })
       })
-      it('returns 500 when database operation fails', done => {
+      it('returns 500 when task add database operation fails', done => {
         database.tasks.addTask.rejects(new Error('Crazy database error'))
 
         supertest(app)
@@ -118,7 +130,20 @@ describe('API', () => {
             done(err)
           })
       })
-      it('returns 404 when machine does not exists', done => {
+      it('returns 500 when account retrieval database operation fails', done => {
+        database.accounts.getAccount.rejects(new Error('Crazy database error'))
+
+        supertest(app)
+          .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .send(goodParams)
+          .expect(500)
+          .end((err, res) => {
+            sinon.assert.calledOnce(database.accounts.getAccount)
+
+            done(err)
+          })
+      })
+      it('returns 404 when machine does not exist', done => {
         const err = new Error(`Machine does not exist`)
         err.type = 'machine_not_exists'
         database.tasks.addTask.rejects(err)
@@ -127,6 +152,44 @@ describe('API', () => {
           .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
           .send(goodParams)
           .expect(404)
+          .end((err, res) => {
+            sinon.assert.calledOnce(database.tasks.addTask)
+
+            done(err)
+          })
+      })
+      it('returns 400 when account has overspent', done => {
+        // Quota of $100.00
+        database.accounts.getAccount.resolves({ spending_quota: 100 })
+        // 101 tasks, $1.00 each
+        database.tasks.getTasks.resolves(Array(101).fill({
+          tier: 'tiny',
+          timestamp_initializing: moment().subtract(100, 'minute').toDate()
+        }))
+
+        supertest(app)
+          .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .send(goodParams)
+          .expect(400)
+          .end((err, res) => {
+            sinon.assert.notCalled(database.tasks.addTask)
+
+            done(err)
+          })
+      })
+      it('Happy flow when account has not overspent', done => {
+        // Quota of $100.00
+        database.accounts.getAccount.resolves({ spending_quota: 100 })
+        // 99 tasks, $1.00 each
+        database.tasks.getTasks.resolves(Array(99).fill({
+          tier: 'tiny',
+          timestamp_initializing: moment().subtract(100, 'minute').toDate()
+        }))
+
+        supertest(app)
+          .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .send(goodParams)
+          .expect(201)
           .end((err, res) => {
             sinon.assert.calledOnce(database.tasks.addTask)
 

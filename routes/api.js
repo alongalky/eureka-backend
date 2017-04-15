@@ -2,10 +2,11 @@ const express = require('express')
 const apiRouter = express.Router()
 const accountsRouter = express.Router({mergeParams: true})
 
-module.exports = ({machinesDatabase, tasksDatabase, cloud, tiers}) => {
+module.exports = ({accountsDatabase, machinesDatabase, tasksDatabase, cloud, tiers}) => {
   const machinesApi = require('./api/machines')(machinesDatabase)
   const tasksApi = require('./api/tasks')({
-    database: tasksDatabase,
+    database: Object.assign({},
+      tasksDatabase, { getAccount: accountsDatabase.getAccount }),
     cloud,
     tiers
   })

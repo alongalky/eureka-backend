@@ -2,6 +2,49 @@ const moment = require('moment')
 const util = require('util')
 const logger = require('../../logger/logger')()
 
+const failIfQuotaExceeded = ({ account, totalCostInCents }) => {
+  const quotaInDollars = parseFloat(account.spending_quota)
+  const didAccountExceededSpendingQuota =
+    totalCostInCents / 100.0 > quotaInDollars
+
+  if (didAccountExceededSpendingQuota) {
+    logger.info(`Account ${account.account_id} has exceeded its quota. ` +
+      `Total spent: $ ${totalCostInCents / 100.0}, Quota: $ ${quotaInDollars}`)
+
+    const err = new Error(`Spending quota exceeded`)
+    err.type = 'spending_quota_exceeded'
+    return Promise.reject(err)
+  } else {
+    return Promise.resolve()
+  }
+}
+
+const addTaskDuration = task => {
+  const start = moment(task.timestamp_initializing)
+
+  let end
+  if (task.timestamp_done) {
+    end = moment(task.timestamp_done)
+  } else {
+    end = moment()
+  }
+
+  task.durationInSeconds = end.diff(start, 'seconds')
+  return task
+}
+
+const addCost = tiers => task => {
+  const tier = tiers.find(t => t.name === task.tier)
+  if (!tier) {
+    throw new Error(`Invalid tier found for task ${task.task_id}`)
+  }
+
+  task.costInCents = tier.pricePerHourInCents * (task.durationInSeconds / (60.0 * 60.0))
+  return task
+}
+
+const addTaskCostAndDuration = tiers => task => addCost(tiers)(addTaskDuration(task))
+
 const addTask = ({ database, cloud, tiers }) => (req, res) => {
   // Validation
   req.checkBody('command', 'Expected command between 1 to 255 characters').notEmpty().isLength({min: 1, max: 255})
@@ -26,7 +69,20 @@ const addTask = ({ database, cloud, tiers }) => (req, res) => {
       account: req.params.account_id
     }
 
-    database.addTask(params)
+    database.getTasks({
+      account: req.params.account_id,
+      key: req.key
+    })
+    .then(tasks => {
+      const totalCostInCents = tasks
+        .map(addTaskCostAndDuration(tiers))
+        .map(task => task.costInCents)
+        .reduce((sum, val) => val + sum, 0)
+
+      return database.getAccount(params.account)
+        .then(account => failIfQuotaExceeded({ account, totalCostInCents }))
+    })
+    .then(() => database.addTask(params))
     .then(taskId => {
       res.status(201).send({message: 'Task queued successfuly'})
       // This call could fail against the API, but we return a 201 anyway.
@@ -35,6 +91,8 @@ const addTask = ({ database, cloud, tiers }) => (req, res) => {
     }).catch(err => {
       if (err.type === 'machine_not_exists') {
         res.status(404).send('Machine not found')
+      } else if (err.type === 'spending_quota_exceeded') {
+        res.status(400).send('Spending quota exceeded')
       } else {
         logger.error(err)
         res.status(500).send('Failed to add task')
@@ -53,33 +111,8 @@ const getTasks = ({database, tiers}) => (req, res) =>
     database.getTasks({
       account: req.params.account_id,
       key: req.key
-    }).then(allTasks => {
-      const addTaskDuration = task => {
-        const start = moment(task.timestamp_initializing)
-
-        let end
-        if (task.timestamp_done) {
-          end = moment(task.timestamp_done)
-        } else {
-          end = moment()
-        }
-
-        task.durationInSeconds = end.diff(start, 'seconds')
-        return task
-      }
-
-      const addCost = task => {
-        const tier = tiers.find(t => t.name === task.tier)
-        if (!tier) {
-          throw new Error(`Invalid tier found for task ${task.task_id}`)
-        }
-
-        task.costInCents = tier.pricePerHourInCents * (task.durationInSeconds / (60.0 * 60.0))
-        return task
-      }
-
-      res.json(allTasks.map(addTaskDuration).map(addCost))
-    }).catch(err => {
+    }).then(allTasks => res.json(allTasks.map(addTaskCostAndDuration(tiers))))
+    .catch(err => {
       logger.error(err)
       res.status(500).send('Failed to get tasks')
     })
