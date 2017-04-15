@@ -5,6 +5,12 @@ const appInsights = require('applicationinsights')
 appInsights.setup(config.applicationInsights.iKey)
   .setAutoCollectRequests(false)
   .start()
+const AppInsightsStream = require('./logger/appInsightsStream')(appInsights.client)
+const logger = require('./logger/logger')()
+logger.addStream({
+  name: 'aiStream',
+  stream: new AppInsightsStream()
+})
 
 const express = require('express')
 const app = express()
@@ -17,7 +23,6 @@ const gce = require('@google-cloud/compute')()
 const googleController = require('./cloud/google/controller')({ config, database: tasksDatabase, gce })
 const cloud = require('./cloud/agnostic')({config, database: tasksDatabase, googleController})
 const apiRouter = require('./routes/api')({machinesDatabase, tasksDatabase, cloud, tiers: config.tiers})
-const logger = require('./logger/logger')()
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }))
