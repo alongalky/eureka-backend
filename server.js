@@ -12,7 +12,7 @@ const config = require('./config/config')(fs, require)
 const googleController = require('./cloud/google/controller')({ config, database: tasksDatabase, gce })
 const cloud = require('./cloud/agnostic')({config, database: tasksDatabase, googleController})
 const apiRouter = require('./routes/api')({machinesDatabase, tasksDatabase, cloud, tiers: config.tiers})
-const logger = require('./logger/logger')
+const logger = require('./logger/logger')()
 
 // Set up Application Insights for logging requests
 appInsights.setup(config.applicationInsights.iKey).start()
