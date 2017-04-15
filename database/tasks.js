@@ -3,7 +3,8 @@ const uuid = require('uuid')
 
 const getTasks = ({key, account}) => {
   const query =
-      'SELECT tasks.name, tasks.command, tasks.status, machines.name AS machine, tasks.tier, tasks.timestamp_start, tasks.timestamp_done ' +
+    'SELECT tasks.name, tasks.command, tasks.status, machines.name AS machine, tasks.tier, ' +
+      'timestamp_initializing, timestamp_done ' +
     'FROM accounts ' +
     'INNER JOIN machines ON accounts.account_id = machines.account_id ' +
     'INNER JOIN tasks ON tasks.machine_id = machines.machine_id ' +
@@ -22,7 +23,7 @@ const addTask = ({command, output, machine, key, taskName, tier, account}) => {
     'WHERE machines.name = ? AND accounts.key = ? AND accounts.secret = ?  AND accounts.account_id = ?'
 
   const insertTaskQuery =
-    'INSERT INTO tasks (`task_id`, `name`, `status`, `command`, `timestamp_start`, `tier`, `machine_id`) ' +
+    'INSERT INTO tasks (`task_id`, `name`, `status`, `command`, `timestamp_initializing`, `tier`, `machine_id`) ' +
     'VALUES (?, ?, ?, ?, ?, ?, ?)'
 
   return database().query(findMachineIdQuery, [machine, key.key, key.secret, account])
@@ -48,7 +49,7 @@ const changeTaskStatus = (taskId, status) => {
 
 const changeTaskStatusRunning = taskId => {
   const changeTaskRunningTimestampQuery =
-    'UPDATE tasks SET status = ?, timestamp_ready = ? WHERE task_id = ?'
+    'UPDATE tasks SET status = ?, timestamp_running = ? WHERE task_id = ?'
 
   return database().query(changeTaskRunningTimestampQuery, ['Running', new Date(), taskId])
 }

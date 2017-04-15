@@ -4,6 +4,12 @@ CREATE TABLE accounts
   `name` VARCHAR(255) NOT NULL,
   `key` VARCHAR(45) NOT NULL,
   `secret` VARCHAR(45) NOT NULL,
+  `public_key` VARCHAR(1024) NOT NULL,
+  `first_name` VARCHAR(255) NOT NULL,
+  `last_name` VARCHAR(255) NOT NULL,
+  `email` VARCHAR(255) NOT NULL,
+  `spending_quota` decimal(15,2) NOT NULL,
+  `vm_quota` INT NOT NULL,
   PRIMARY KEY (account_id)
 );
 
@@ -22,8 +28,8 @@ CREATE TABLE tasks
   `name` VARCHAR(255) NOT NULL,
   `status` VARCHAR(45) NOT NULL,
   `command` VARCHAR(255) NOT NULL,
-  `timestamp_start` DATETIME NOT NULL,
-  `timestamp_ready` DATETIME DEFAULT NULL,
+  `timestamp_initializing` DATETIME NOT NULL,
+  `timestamp_running` DATETIME DEFAULT NULL,
   `timestamp_done` DATETIME DEFAULT NULL,
   `tier` VARCHAR(45) NOT NULL,
   `machine_id` VARCHAR(45) NOT NULL,

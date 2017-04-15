@@ -55,7 +55,7 @@ const getTasks = ({database, tiers}) => (req, res) =>
       key: req.key
     }).then(allTasks => {
       const addTaskDuration = task => {
-        const start = moment(task.timestamp_start)
+        const start = moment(task.timestamp_initializing)
 
         let end
         if (task.timestamp_done) {

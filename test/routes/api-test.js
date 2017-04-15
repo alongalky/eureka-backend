@@ -223,7 +223,7 @@ describe('API', () => {
       database.tasks.getTasks.returns(Promise.resolve([
         {
           tier: 'tiny',
-          timestamp_start: start.toDate(),
+          timestamp_initializing: start.toDate(),
           timestamp_done: end.toDate()
         }
       ]))
@@ -245,7 +245,7 @@ describe('API', () => {
       database.tasks.getTasks.returns(Promise.resolve([
         {
           tier: 'tiny',
-          timestamp_start: start.toDate()
+          timestamp_initializing: start.toDate()
         }
       ]))
 
