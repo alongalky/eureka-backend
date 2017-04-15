@@ -1,4 +1,11 @@
+const fs = require('fs')
+const config = require('./config/config')(fs, require)
 const appInsights = require('applicationinsights')
+// Set up Application Insights for logging requests
+appInsights.setup(config.applicationInsights.iKey)
+  .setAutoCollectRequests(false)
+  .start()
+
 const express = require('express')
 const app = express()
 const bodyParser = require('body-parser')
@@ -7,8 +14,6 @@ const expressValidator = require('express-validator')
 const machinesDatabase = require('./database/machines')
 const tasksDatabase = require('./database/tasks')
 const gce = require('@google-cloud/compute')()
-const fs = require('fs')
-const config = require('./config/config')(fs, require)
 const googleController = require('./cloud/google/controller')({ config, database: tasksDatabase, gce })
 const cloud = require('./cloud/agnostic')({config, database: tasksDatabase, googleController})
 const apiRouter = require('./routes/api')({machinesDatabase, tasksDatabase, cloud, tiers: config.tiers})
@@ -30,9 +35,6 @@ winston.add(aiLogger, {
   key: config.applicationInsights.iKey
 })
 
-// Set up Application Insights for logging requests
-appInsights.setup(config.applicationInsights.iKey).start()
-
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
@@ -42,7 +44,9 @@ app.use(expressValidator({
   }
 }))
 // Request logging middleware
-app.use(morgan('tiny'))
+app.use(morgan('tiny', {
+  skip: (req, res) => req.url.endsWith('/health')
+}))
 
 // Our authentication middleware
 app.use((req, res, next) => {
@@ -54,6 +58,12 @@ app.use((req, res, next) => {
 
 var port = process.env.PORT || 8080
 
+// Filter requests that don't start with /api from analytics
+app.use('/api', (req, res, next) => {
+  appInsights.client.trackRequest(req, res)
+
+  next()
+})
 app.use('/api', apiRouter)
 
 app.listen(port)
