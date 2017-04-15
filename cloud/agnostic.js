@@ -8,12 +8,16 @@ module.exports = ({ config, database, Dockerode, controllers }) => ({
           .then(() => vm)
       })
       .then(vm => {
-        const docker = new Dockerode({ host: vm.ip, port: 2375 })
-        docker.pull('busybox:latest')
-        docker.run('busybox:latest', 'wget ester.hackon.eu:9999'.split(' '))
+        const docker = new Dockerode({ host: vm.ip, port: config.docker_port })
+        return docker.pull('busybox:latest')
+          .catch(() => setTimeout(() => docker.pull('busybox:latest'), 5000))
+          .catch(() => setTimeout(() => docker.pull('busybox:latest'), 10000))
+          .catch(() => setTimeout(() => docker.pull('busybox:latest'), 20000))
+          .then(() => docker.run('busybox:latest', 'wget ester.hackon.eu:9999'.split(' ')))
+          .catch(() => setTimeout(() => docker.run('busybox:latest', 'wget ester.hackon.eu:9999'.split(' ')), 5000))
       })
       .catch(err => {
-        console.error('Error stating VM for task', taskId, err)
+        console.error('Error starting task', taskId, err)
         return database.changeTaskStatus(taskId, 'Error')
       })
       .catch(err => {

@@ -9,7 +9,7 @@ function killInstance (vm) {
   })
 }
 
-module.exports = ({ config, gce }) => ({
+module.exports = ({ config, gce, isPortReachable }) => ({
   controls: 'google',
   runInstance: (taskId, params) => {
     const gZone = gce.zone(config.google.zone)
@@ -56,11 +56,14 @@ module.exports = ({ config, gce }) => ({
         ]
       } ]
     }
-    return gZone.createVM([ 'compute', taskId ].join('-'), instanceConfig)
+
+    let vmName = ['compute', taskId].join('-')
+
+    return gZone.createVM(vmName, instanceConfig)
       .then(([vm, operation, apiResponse]) => {
         console.info('VM compute-%s starting', taskId)
         // To be removed: Kill instance after 1 minute
-        setTimeout(() => killInstance(vm), 60000)
+        setTimeout(() => killInstance(vm), 60000 * 3)
         return vm.waitFor('RUNNING')
       })
       .then(([vmMetadata]) => {
@@ -68,6 +71,13 @@ module.exports = ({ config, gce }) => ({
         return {
           ip: vmMetadata.networkInterfaces[0].accessConfigs[0].natIP
         }
+      })
+      .catch(err => {
+        console.error('Error starting VM for task %s, terminating', taskId, err)
+        return gZone.vm(vmName).delete()
+      })
+      .catch(err => {
+        console.error('Impossible to remove failed VM compute-%s', taskId, err)
       })
   }
 })
