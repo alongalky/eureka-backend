@@ -1,4 +1,5 @@
 const path = require('path')
+const deepExtend = require('deep-extend')
 
 module.exports = (fs, readFile, env = process.env.EUREKA_ENV) => {
   const defaultsfile = path.join(__dirname, 'defaults.config.js')
@@ -8,7 +9,5 @@ module.exports = (fs, readFile, env = process.env.EUREKA_ENV) => {
     environmentfile = path.join(__dirname, 'local.config.js')
   }
 
-  const config = Object.assign(readFile(defaultsfile), readFile(environmentfile))
-
-  return config
+  return deepExtend(readFile(defaultsfile), readFile(environmentfile))
 }

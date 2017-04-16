@@ -25,6 +25,17 @@ describe('Config', () => {
     sinon.assert.calledTwice(readFile)
   })
 
+  it('merges objects deeply', () => {
+    fs.existsSync.returns(false)
+    readFile.onSecondCall().returns({ aws: { image: 'debian' } })
+
+    const config = configFactory(fs, readFile)
+
+    expect(config.aws.region).to.equal('default-region')
+    expect(config.aws.image).to.equal('debian')
+    sinon.assert.calledTwice(readFile)
+  })
+
   it('overrides properties on merge', () => {
     fs.existsSync.returns(false)
     readFile.onSecondCall().returns({ aws: { region: 'us-west-2' } })

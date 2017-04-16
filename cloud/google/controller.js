@@ -58,17 +58,17 @@ module.exports = ({ config, gce }) => ({
       } ]
     }
 
-    let vmName = ['compute', taskId].join('-')
+    const vmName = ['compute', taskId].join('-')
 
     return gZone.createVM(vmName, instanceConfig)
       .then(([vm, operation, apiResponse]) => {
-        logger.info('VM compute-%s starting', taskId)
+        logger.info('VM %s starting', vmName)
         // To be removed: Kill instance after 3 minutes
         setTimeout(() => killInstance(vm), 60000 * 3)
         return vm.waitFor('RUNNING')
       })
       .then(([vmMetadata]) => {
-        logger.info('VM compute-%s started', taskId)
+        logger.info('VM %s started', vmName)
         return {
           ip: vmMetadata.networkInterfaces[0].accessConfigs[0].natIP
         }
@@ -79,7 +79,7 @@ module.exports = ({ config, gce }) => ({
       })
       .catch(err => {
         // TODO: Alert
-        logger.error('Impossible to remove failed VM compute-%s', taskId, err)
+        logger.error('Impossible to remove failed VM %s', vmName, err)
       })
   }
 })

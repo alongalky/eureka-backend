@@ -22,7 +22,12 @@ const tasksDatabase = require('./database/tasks')
 const gce = require('@google-cloud/compute')()
 const Dockerode = require('dockerode')
 const googleController = require('./cloud/google/controller')({ config, gce })
-const cloud = require('./cloud/agnostic')({ config, database: tasksDatabase, Dockerode, controllers: [googleController], delayFactorInMs: 1000 })
+const persevere = require('./util/persevere')
+const controller = [googleController].find(c => c.controls === config.cloud_provider)
+if (!controller) {
+  throw new Error(`Could not find a cloud controller to handle ${config.cloud_provider}`)
+}
+const cloud = require('./cloud/agnostic')({ config, database: tasksDatabase, Dockerode, controller, persevere })
 const apiRouter = require('./routes/api')({ machinesDatabase, tasksDatabase, cloud, tiers: config.tiers })
 
 // Middleware

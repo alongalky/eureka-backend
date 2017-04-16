@@ -37,58 +37,20 @@ describe('Cloud controller', () => {
       Dockerode.prototype.pull.reset()
       Dockerode.prototype.run.reset()
     })
+    const controllers = [googleController]
+    const persevere = callback => callback()
     const cloud = require('../../cloud/agnostic')({
       config,
       database,
       Dockerode,
-      controllers: [googleController],
-      delayFactorInMs: 1
+      controller: controllers.find(c => c.controls === config.cloud_provider),
+      persevere
     })
     it('on happy flow transitions a task to Initializing and then Running', done => {
       database.changeTaskStatusInitializing.resolves()
       googleController.runInstance.resolves({ ip: '1.2.3.4' })
       Dockerode.prototype.pull.resolves()
       Dockerode.prototype.run.resolves()
-
-      cloud.runTask('1234', {})
-        .then(() => {
-          sinon.assert.calledWithMatch(Dockerode, { host: '1.2.3.4' })
-          sinon.assert.calledOnce(database.changeTaskStatusInitializing)
-          sinon.assert.calledOnce(database.changeTaskStatusRunning)
-          sinon.assert.callOrder(database.changeTaskStatusInitializing, database.changeTaskStatusRunning)
-          sinon.assert.calledWith(database.changeTaskStatusInitializing, '1234')
-          sinon.assert.calledWith(database.changeTaskStatusRunning, '1234')
-          sinon.assert.notCalled(database.changeTaskStatusError)
-          sinon.assert.notCalled(database.changeTaskStatusDone)
-          done()
-        })
-    })
-    it('transitions task to Running on the second succesfull docker pull attempt and happy flow', done => {
-      database.changeTaskStatusInitializing.resolves()
-      googleController.runInstance.resolves({ ip: '1.2.3.4' })
-      Dockerode.prototype.pull.onFirstCall().rejects(new Error('Crazy docker error'))
-      Dockerode.prototype.pull.onSecondCall().resolves()
-      Dockerode.prototype.run.resolves()
-
-      cloud.runTask('1234', {})
-        .then(() => {
-          sinon.assert.calledWithMatch(Dockerode, { host: '1.2.3.4' })
-          sinon.assert.calledOnce(database.changeTaskStatusInitializing)
-          sinon.assert.calledOnce(database.changeTaskStatusRunning)
-          sinon.assert.callOrder(database.changeTaskStatusInitializing, database.changeTaskStatusRunning)
-          sinon.assert.calledWith(database.changeTaskStatusInitializing, '1234')
-          sinon.assert.calledWith(database.changeTaskStatusRunning, '1234')
-          sinon.assert.notCalled(database.changeTaskStatusError)
-          sinon.assert.notCalled(database.changeTaskStatusDone)
-          done()
-        })
-    })
-    it('transitions task to Running on the second succesfull docker run attempt and happy flow', done => {
-      database.changeTaskStatusInitializing.resolves()
-      googleController.runInstance.resolves({ ip: '1.2.3.4' })
-      Dockerode.prototype.pull.resolves()
-      Dockerode.prototype.run.onFirstCall().rejects(new Error('Crazy docker error'))
-      Dockerode.prototype.run.onSecondCall().resolves()
 
       cloud.runTask('1234', {})
         .then(() => {

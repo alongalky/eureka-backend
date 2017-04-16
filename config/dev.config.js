@@ -4,6 +4,10 @@ const database = 'eureka_dev'
 const instanceName = 'dotted-vim-164110:us-east1:eureka-dev'
 
 module.exports = {
+  google: {
+    project: 'dotted-vim-164110',
+    instance_image: 'docker-enabled-nowrapping'
+  },
   database: {
     connectionLimit: 10,
     host: 'localhost',

@@ -1,23 +1,16 @@
-function setTimeoutPromisified (callback, time) {
-  return new Promise(resolve => setTimeout(resolve, time))
-    .then(() => callback())
-}
-
+const moment = require('moment')
 const logger = require('../logger/logger')()
-module.exports = ({ config, database, Dockerode, controllers, delayFactorInMs }) => ({
+
+module.exports = ({ config, database, Dockerode, controller, persevere }) => ({
   runTask: (taskId, params) => {
-    const controller = controllers.find(c => c.controls === config.cloud_provider)
     return database.changeTaskStatusInitializing(taskId)
       .then(() => controller.runInstance(taskId, params))
       .then(vm => {
         const docker = new Dockerode({ host: vm.ip, port: config.docker_port })
-        return docker.pull('busybox:latest')
-          .catch(() => setTimeoutPromisified(() => docker.pull('busybox:latest'), 5 * delayFactorInMs))
-          .catch(() => setTimeoutPromisified(() => docker.pull('busybox:latest'), 10 * delayFactorInMs))
-          .catch(() => setTimeoutPromisified(() => docker.pull('busybox:latest'), 20 * delayFactorInMs))
-          .then(() => docker.run('busybox:latest', 'wget ester.hackon.eu:9999'.split(' ')))
-          .catch(() => setTimeoutPromisified(() => docker.run('busybox:latest', 'wget ester.hackon.eu:9999'.split(' ')), 5 * delayFactorInMs))
+        return persevere(() => docker.pull('busybox:latest'), Array(6).fill(moment.duration(5, 'seconds')))
+          .then(() => persevere(() => docker.run('busybox:latest', 'wget ester.hackon.eu:9999'.split(' ')), [moment.duration(5, 'seconds')]))
           .then(() => database.changeTaskStatusRunning(taskId))
+          .then(() => logger.info('Task %s running', taskId))
       })
       .catch(err => {
         logger.error('Error starting task', taskId, err)

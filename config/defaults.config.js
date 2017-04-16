@@ -5,10 +5,8 @@ module.exports = {
     region: 'us-west-2'
   },
   google: {
-    project: 'dotted-vim-164110',
     region: 'us-east1',
-    zone: 'us-east1-b',
-    instance_image: 'docker-enabled-nowrapping'
+    zone: 'us-east1-b'
   },
   tiers: [
     {
