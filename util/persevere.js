@@ -1,4 +1,4 @@
-const delay = (time) => new Promise(resolve => setTimeout(resolve, time))
+const delay = time => new Promise(resolve => setTimeout(resolve, time))
 
 module.exports = (callback, delays) =>
   delays.reduce((chain, duration) =>
