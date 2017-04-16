@@ -42,9 +42,7 @@ describe('API', () => {
 
     // Route
     app.use('/api', apiRouter({
-      accountsDatabase: database.accounts,
-      machinesDatabase: database.machines,
-      tasksDatabase: database.tasks,
+      database,
       cloud,
       tiers: [{
         name: 'tiny',

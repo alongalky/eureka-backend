@@ -1,7 +1,7 @@
 const util = require('util')
 const logger = require('../../logger/logger')()
 
-module.exports = database => {
+module.exports = ({ database }) => {
   return {
     getMachines: (req, res) => {
       req.getValidationResult().then(result => {
@@ -11,7 +11,7 @@ module.exports = database => {
         }
 
         const account = req.params.account_id
-        return database.getMachines({account, key: req.key})
+        return database.machines.getMachines({account, key: req.key})
           .then(allMachines => res.json(allMachines))
           .catch(err => {
             logger.error(err)

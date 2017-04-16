@@ -69,7 +69,7 @@ const addTask = ({ database, cloud, tiers }) => (req, res) => {
       account: req.params.account_id
     }
 
-    database.getTasks({
+    database.tasks.getTasks({
       account: req.params.account_id,
       key: req.key
     })
@@ -79,10 +79,10 @@ const addTask = ({ database, cloud, tiers }) => (req, res) => {
         .map(task => task.costInCents)
         .reduce((sum, val) => val + sum, 0)
 
-      return database.getAccount(params.account)
+      return database.accounts.getAccount(params.account)
         .then(account => failIfQuotaExceeded({ account, totalCostInCents }))
     })
-    .then(() => database.addTask(params))
+    .then(() => database.tasks.addTask(params))
     .then(taskId => {
       res.status(201).send({message: 'Task queued successfuly'})
       // This call could fail against the API, but we return a 201 anyway.
@@ -108,7 +108,7 @@ const getTasks = ({database, tiers}) => (req, res) =>
       return
     }
 
-    database.getTasks({
+    database.tasks.getTasks({
       account: req.params.account_id,
       key: req.key
     }).then(allTasks => res.json(allTasks.map(addTaskCostAndDuration(tiers))))

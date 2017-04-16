@@ -17,9 +17,7 @@ const app = express()
 const bodyParser = require('body-parser')
 const morgan = require('morgan')
 const expressValidator = require('express-validator')
-const machinesDatabase = require('./database/machines')
-const tasksDatabase = require('./database/tasks')
-const accountsDatabase = require('./database/accounts')
+const database = require('./database/database')
 const gce = require('@google-cloud/compute')()
 const Dockerode = require('dockerode')
 const googleController = require('./cloud/google/controller')({ config, gce })
@@ -28,11 +26,9 @@ const controller = [googleController].find(c => c.controls === config.cloud_prov
 if (!controller) {
   throw new Error(`Could not find a cloud controller to handle ${config.cloud_provider}`)
 }
-const cloud = require('./cloud/agnostic')({ config, database: tasksDatabase, Dockerode, controller, persevere })
+const cloud = require('./cloud/agnostic')({ config, database, Dockerode, controller, persevere })
 const apiRouter = require('./routes/api')({
-  accountsDatabase,
-  machinesDatabase,
-  tasksDatabase,
+  database,
   cloud,
   tiers: config.tiers
 })

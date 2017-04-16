@@ -1,4 +1,4 @@
-const database = require('./database')
+const connection = require('../connection')
 
 module.exports = {
   getAccount: account => {
@@ -7,7 +7,7 @@ module.exports = {
       'FROM accounts ' +
       'WHERE accounts.account_id = ?'
 
-    return database().query(query, [account])
+    return connection().query(query, [account])
       .then(([rows, fields]) => rows[0])
   }
 }
