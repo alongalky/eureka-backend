@@ -20,9 +20,15 @@ const expressValidator = require('express-validator')
 const machinesDatabase = require('./database/machines')
 const tasksDatabase = require('./database/tasks')
 const gce = require('@google-cloud/compute')()
-const googleController = require('./cloud/google/controller')({ config, database: tasksDatabase, gce })
-const cloud = require('./cloud/agnostic')({config, database: tasksDatabase, googleController})
-const apiRouter = require('./routes/api')({machinesDatabase, tasksDatabase, cloud, tiers: config.tiers})
+const Dockerode = require('dockerode')
+const googleController = require('./cloud/google/controller')({ config, gce })
+const persevere = require('./util/persevere')
+const controller = [googleController].find(c => c.controls === config.cloud_provider)
+if (!controller) {
+  throw new Error(`Could not find a cloud controller to handle ${config.cloud_provider}`)
+}
+const cloud = require('./cloud/agnostic')({ config, database: tasksDatabase, Dockerode, controller, persevere })
+const apiRouter = require('./routes/api')({ machinesDatabase, tasksDatabase, cloud, tiers: config.tiers })
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }))
