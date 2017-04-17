@@ -1,16 +1,21 @@
 const express = require('express')
 const apiRouter = express.Router()
 const accountsRouter = express.Router({mergeParams: true})
+const passport = require('passport')
 
-module.exports = ({ database, cloud, tiers }) => {
+module.exports = ({ database, cloud, tiers, config, strategy }) => {
   const machinesApi = require('./api/machines')({ database })
   const tasksApi = require('./api/tasks')({ database, cloud, tiers })
+  const authenticateApi = require('./api/authenticate')({ database, config })
 
   apiRouter.get('/health-check', (req, res) => {
     res.json({ message: 'All is well' })
   })
 
-  apiRouter.use('/accounts/:account_id', accountsRouter)
+  apiRouter.post('/authenticate', authenticateApi.authenticate)
+
+  passport.use(strategy)
+  apiRouter.use('/accounts/:account_id', passport.authenticate('jwt', {session: false}), accountsRouter)
 
   // Add account_id verification middleware
   accountsRouter.use((req, res, next) => {

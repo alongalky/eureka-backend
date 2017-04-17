@@ -19,5 +19,8 @@ module.exports = {
   },
   applicationInsights: {
     iKey: process.env.APPINSIGHTS_INSTRUMENTATIONKEY
+  },
+  authentication: {
+    secret: '2AfLYp83GtvS8nzs'
   }
 }

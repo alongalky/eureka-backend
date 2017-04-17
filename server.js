@@ -19,6 +19,7 @@ const morgan = require('morgan')
 const expressValidator = require('express-validator')
 const database = require('./database/database')
 const gce = require('@google-cloud/compute')()
+const apiAuthenticate = require('./routes/api/authenticate')({ database, config })
 const Dockerode = require('dockerode')
 const googleController = require('./cloud/google/controller')({ config, gce })
 const persevere = require('./util/persevere')
@@ -30,7 +31,9 @@ const cloud = require('./cloud/agnostic')({ config, database, Dockerode, control
 const apiRouter = require('./routes/api')({
   database,
   cloud,
-  tiers: config.tiers
+  tiers: config.tiers,
+  config,
+  strategy: apiAuthenticate.Strategy()
 })
 
 // Middleware
@@ -45,14 +48,6 @@ app.use(expressValidator({
 app.use(morgan('tiny', {
   skip: (req, res) => req.url.endsWith('/health')
 }))
-
-// Our authentication middleware
-app.use((req, res, next) => {
-  const authHeader = req.get('Authentication')
-  const [key, secret] = authHeader ? authHeader.trim().split(':') : ['', '']
-  req.key = {key, secret}
-  next()
-})
 
 var port = process.env.PORT || 8080
 

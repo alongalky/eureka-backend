@@ -9,5 +9,14 @@ module.exports = {
 
     return connection().query(query, [account])
       .then(([rows, fields]) => rows[0])
+  },
+  getAccountSecretKey: account => {
+    const query =
+      'SELECT accounts.account_id, accounts.key, accounts.secret ' +
+      'FROM accounts ' +
+      'WHERE accounts.account_id = ?'
+
+    return connection().query(query, [account])
+      .then(([rows, fields]) => rows.length > 0 ? rows[0] : null)
   }
 }
