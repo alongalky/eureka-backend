@@ -73,6 +73,7 @@ describe('API', () => {
         isArray: Array.isArray
       }
     }))
+    app.use(passport.initialize())
   })
 
   beforeEach(() => {
@@ -632,19 +633,6 @@ describe('API', () => {
             done(err)
           })
         })
-        it('does not return token if account_id is incorrect', done => {
-          const badParams = Object.assign({}, goodParams, {
-            account_id: '9e43c1df-04c9-4d40-844f-65dfda675e06'
-          })
-          supertest(app)
-          .post('/api/authenticate')
-          .send(badParams)
-          .expect(401)
-          .end((err, res) => {
-            expect(res.body).to.not.property('token')
-            done(err)
-          })
-        })
       })
     })
     describe('Authentication logic', () => {
@@ -653,9 +641,11 @@ describe('API', () => {
         secret: 'Secret',
         account_id: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91'
       }
+      const differentAccount = Object.assign({}, account, { account_id: 'fe7fa976-12fa-416f-b4f3-ef79f7030dde' })
+
       beforeEach(() => {
         database.machines.getMachines.resolves([])
-        database.accounts.getAccount.resolves(account)
+        database.accounts.getAccountSecretKey.withArgs('b9fe526d-6c9c-4c59-a705-c145c39c0a91').resolves(account)
       })
       it('authenticates on happy flow', done => {
         const goodToken = jwt.sign(account, config.authentication.secret, {
@@ -667,39 +657,49 @@ describe('API', () => {
           .set('Authorization', 'JWT ' + goodToken)
           .expect(200)
           .end((err, res) => {
-            sinon.assert.calledOnce(database.accounts.getAccount)
-            sinon.assert.calledWithExactly(database.accounts.getAccount, 'b9fe526d-6c9c-4c59-a705-c145c39c0a91')
+            sinon.assert.calledOnce(database.accounts.getAccountSecretKey)
+            sinon.assert.calledWithExactly(database.accounts.getAccountSecretKey, 'b9fe526d-6c9c-4c59-a705-c145c39c0a91')
             done(err)
           })
       })
       it('fails when account_id in token is different from the one in the url', done => {
-        const badAccount = Object.assign({}, account, { account_id: 'fe7fa976-12fa-416f-b4f3-ef79f7030dde' })
-
-        const badToken = jwt.sign(badAccount, config.authentication.secret, {
+        const differentToken = jwt.sign(differentAccount, config.authentication.secret, {
           expiresIn: '7 days'
         })
 
         supertest(app)
           .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/machines')
-          .set('Authorization', 'JWT ' + badToken)
+          .set('Authorization', 'JWT ' + differentToken)
           .expect(401)
           .end((err, res) => {
-            sinon.assert.calledOnce(database.accounts.getAccount)
-            sinon.assert.calledWithExactly(database.accounts.getAccount, badAccount.account_id)
+            sinon.assert.notCalled(database.accounts.getAccountSecretKey)
             done(err)
           })
       })
       it('fails when token is expired', done => {
-        const badToken = jwt.sign(account, config.authentication.secret, {
+        const expiredToken = jwt.sign(account, config.authentication.secret, {
           expiresIn: -1
         })
 
         supertest(app)
           .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/machines')
-          .set('Authorization', 'JWT ' + badToken)
+          .set('Authorization', 'JWT ' + expiredToken)
           .expect(401)
           .end((err, res) => {
             sinon.assert.notCalled(database.accounts.getAccount)
+            done(err)
+          })
+      })
+      it('fails when token account matches url account but the key is different', done => {
+        const tokenWithWrongKey = jwt.sign(Object.assign({}, account, { key: 'oldwrongkey' }),
+          config.authentication.secret, { expiresIn: '7 days' })
+
+        supertest(app)
+          .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/machines')
+          .set('Authorization', 'JWT ' + tokenWithWrongKey)
+          .expect(401)
+          .end((err, res) => {
+            sinon.assert.calledOnce(database.accounts.getAccountSecretKey)
             done(err)
           })
       })

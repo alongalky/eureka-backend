@@ -23,6 +23,8 @@ const apiAuthenticate = require('./routes/api/authenticate')({ database, config 
 const Dockerode = require('dockerode')
 const googleController = require('./cloud/google/controller')({ config, gce })
 const persevere = require('./util/persevere')
+const passport = require('passport')
+
 const controller = [googleController].find(c => c.controls === config.cloud_provider)
 if (!controller) {
   throw new Error(`Could not find a cloud controller to handle ${config.cloud_provider}`)
@@ -44,6 +46,8 @@ app.use(expressValidator({
     isArray: Array.isArray
   }
 }))
+app.use(passport.initialize())
+
 // Request logging middleware
 app.use(morgan('tiny', {
   skip: (req, res) => req.url.endsWith('/health')

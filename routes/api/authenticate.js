@@ -44,20 +44,25 @@ module.exports = ({ database, config }) => ({
   Strategy: () => {
     const opts = {
       jwtFromRequest: ExtractJwt.fromAuthHeader(),
-      secretOrKey: config.authentication.secret
+      secretOrKey: config.authentication.secret,
+      passReqToCallback: true
     }
-    return new JwtStrategy(opts, (jwtPayload, done) => {
-      database.accounts.getAccount(jwtPayload.account_id)
-        .then(account => {
-          if (account.account_id === jwtPayload.account_id) {
-            return done(null, account)
-          } else {
-            return done(null, false, { message: 'Token does not match account' })
-          }
-        })
-        .catch(err => {
-          return done(err, false)
-        })
+    return new JwtStrategy(opts, (req, jwtPayload, done) => {
+      if (jwtPayload.account_id !== req.params.account_id) {
+        return done(null, false, { message: 'Token does not match account' })
+      } else {
+        return database.accounts.getAccountSecretKey(req.params.account_id)
+          .then(account => {
+            if (account.key === jwtPayload.key) {
+              return done(null, account)
+            } else {
+              return done(null, false, { message: 'Key does not match account key' })
+            }
+          })
+          .catch(err => {
+            return done(err, false)
+          })
+      }
     })
   }
 })
