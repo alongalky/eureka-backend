@@ -65,15 +65,13 @@ module.exports = ({database, cloud, tiers}) => {
           command: req.body.command,
           output: req.body.output,
           machine: req.body.machine,
-          key: req.key,
           taskName: req.body.taskName,
           tier: req.body.tier,
           account: req.params.account_id
         }
 
         database.tasks.getTasks({
-          account: req.params.account_id,
-          key: req.key
+          account: req.params.account_id
         })
         .then(tasks => {
           const totalCostInCents = tasks
@@ -110,8 +108,7 @@ module.exports = ({database, cloud, tiers}) => {
         }
 
         database.tasks.getTasks({
-          account: req.params.account_id,
-          key: req.key
+          account: req.params.account_id
         }).then(allTasks => res.json(allTasks.map(addTaskCostAndDuration)))
         .catch(err => {
           logger.error(err)

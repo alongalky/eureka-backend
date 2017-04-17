@@ -19,9 +19,12 @@ const morgan = require('morgan')
 const expressValidator = require('express-validator')
 const database = require('./database/database')
 const gce = require('@google-cloud/compute')()
+const apiAuthenticate = require('./routes/api/authenticate')({ database, config })
 const Dockerode = require('dockerode')
 const googleController = require('./cloud/google/controller')({ config, gce })
 const persevere = require('./util/persevere')
+const passport = require('passport')
+
 const controller = [googleController].find(c => c.controls === config.cloud_provider)
 if (!controller) {
   throw new Error(`Could not find a cloud controller to handle ${config.cloud_provider}`)
@@ -30,7 +33,9 @@ const cloud = require('./cloud/agnostic')({ config, database, Dockerode, control
 const apiRouter = require('./routes/api')({
   database,
   cloud,
-  tiers: config.tiers
+  tiers: config.tiers,
+  config,
+  authStrategy: apiAuthenticate.Strategy()
 })
 
 // Middleware
@@ -41,18 +46,12 @@ app.use(expressValidator({
     isArray: Array.isArray
   }
 }))
+app.use(passport.initialize())
+
 // Request logging middleware
 app.use(morgan('tiny', {
   skip: (req, res) => req.url.endsWith('/health')
 }))
-
-// Our authentication middleware
-app.use((req, res, next) => {
-  const authHeader = req.get('Authentication')
-  const [key, secret] = authHeader ? authHeader.trim().split(':') : ['', '']
-  req.key = {key, secret}
-  next()
-})
 
 var port = process.env.PORT || 8080
 
