@@ -2,13 +2,9 @@ const express = require('express')
 const apiRouter = express.Router()
 const accountsRouter = express.Router({mergeParams: true})
 
-module.exports = ({machinesDatabase, tasksDatabase, cloud, tiers}) => {
-  const machinesApi = require('./api/machines')(machinesDatabase)
-  const tasksApi = require('./api/tasks')({
-    database: tasksDatabase,
-    cloud,
-    tiers
-  })
+module.exports = ({ database, cloud, tiers }) => {
+  const machinesApi = require('./api/machines')({ database })
+  const tasksApi = require('./api/tasks')({ database, cloud, tiers })
 
   apiRouter.get('/health-check', (req, res) => {
     res.json({ message: 'All is well' })
