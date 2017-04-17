@@ -18,8 +18,7 @@ describe('API', () => {
     },
     tasks: {
       addTask: sinon.stub(),
-      getTasks: sinon.stub(),
-      changeTaskStatus: sinon.stub()
+      getTasks: sinon.stub()
     },
     accounts: {
       getAccount: sinon.stub()
