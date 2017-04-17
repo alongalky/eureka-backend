@@ -49,14 +49,14 @@ module.exports = ({ database, config }) => ({
     }
     return new JwtStrategy(opts, (req, jwtPayload, done) => {
       if (jwtPayload.account_id !== req.params.account_id) {
-        return done(null, false, { message: 'Token does not match account' })
+        return done(null, false, { message: 'Token does not provide access to requested account' })
       } else {
-        return database.accounts.getAccountSecretKey(req.params.account_id)
+        return database.accounts.getAccountSecretKey(jwtPayload.account_id)
           .then(account => {
             if (account.key === jwtPayload.key) {
               return done(null, account)
             } else {
-              return done(null, false, { message: 'Key does not match account key' })
+              return done(null, false, { message: 'Token contains invalid key for the account. Probably using old token, please renew.' })
             }
           })
           .catch(err => {
