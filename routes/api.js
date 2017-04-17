@@ -3,7 +3,7 @@ const apiRouter = express.Router()
 const accountsRouter = express.Router({mergeParams: true})
 const passport = require('passport')
 
-module.exports = ({ database, cloud, tiers, config, strategy }) => {
+module.exports = ({ database, cloud, tiers, config, authStrategy }) => {
   const machinesApi = require('./api/machines')({ database })
   const tasksApi = require('./api/tasks')({ database, cloud, tiers })
   const authenticateApi = require('./api/authenticate')({ database, config })
@@ -14,7 +14,7 @@ module.exports = ({ database, cloud, tiers, config, strategy }) => {
 
   apiRouter.post('/authenticate', authenticateApi.authenticate)
 
-  passport.use(strategy)
+  passport.use(authStrategy)
   apiRouter.use('/accounts/:account_id', passport.authenticate('jwt', {session: false}), accountsRouter)
 
   // Add account_id verification middleware

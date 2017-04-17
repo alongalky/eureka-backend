@@ -1,7 +1,7 @@
 const connection = require('../connection')
 
 module.exports = {
-  getMachines: ({account, key}) => {
+  getMachines: ({account}) => {
     const query =
       'SELECT machines.machine_id, machines.name ' +
       'FROM accounts ' +

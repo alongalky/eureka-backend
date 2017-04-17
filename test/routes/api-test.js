@@ -45,11 +45,11 @@ describe('API', () => {
       if (succeedAuthentication) {
         return this.success({ message: 'Yay' })
       } else {
-        return this.fail({ message: 'Failing fake strategy' }, 401)
+        return this.fail({ message: 'Failing fake authentication strategy' }, 401)
       }
     }
   }
-  const strategy = new FakeEurekaStrategy()
+  const authStrategy = new FakeEurekaStrategy()
   const config = {
     authentication: {
       secret: 'puppy'
@@ -59,7 +59,7 @@ describe('API', () => {
     database,
     cloud,
     tiers,
-    strategy,
+    authStrategy,
     config
   }
   const app = express()
@@ -494,7 +494,7 @@ describe('API', () => {
       const apiAuthenticate = require('../../routes/api/authenticate')({ database, config })
 
       app.use('/api', apiRouter(Object.assign({}, apiRouterParams, {
-        strategy: apiAuthenticate.Strategy()
+        authStrategy: apiAuthenticate.Strategy()
       })))
     })
     beforeEach(() => {
@@ -519,7 +519,7 @@ describe('API', () => {
             .send(goodParams)
             .expect(200, done)
         })
-        for (let prop of ['secret', 'key', 'account_id']) {
+        for (let prop of ['secret', 'account_id']) {
           it(`returns 422 when ${prop} is too long`, done => {
             const badParams = Object.assign({}, goodParams, { [prop]: 'h'.repeat(256) })
 

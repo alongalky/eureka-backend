@@ -11,7 +11,7 @@ module.exports = ({ database }) => {
         }
 
         const account = req.params.account_id
-        return database.machines.getMachines({account, key: req.key})
+        return database.machines.getMachines({account})
           .then(allMachines => res.json(allMachines))
           .catch(err => {
             logger.error(err)

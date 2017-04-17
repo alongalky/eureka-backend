@@ -50,9 +50,9 @@ module.exports = ({ database, config }) => ({
       database.accounts.getAccount(jwtPayload.account_id)
         .then(account => {
           if (account.account_id === jwtPayload.account_id) {
-            done(null, account)
+            return done(null, account)
           } else {
-            done(null, false, { message: 'Token does not match account' })
+            return done(null, false, { message: 'Token does not match account' })
           }
         })
         .catch(err => {

@@ -33,7 +33,7 @@ const apiRouter = require('./routes/api')({
   cloud,
   tiers: config.tiers,
   config,
-  strategy: apiAuthenticate.Strategy()
+  authStrategy: apiAuthenticate.Strategy()
 })
 
 // Middleware
