@@ -4,6 +4,7 @@ const appInsights = require('applicationinsights')
 // Set up Application Insights for logging requests
 appInsights.setup(config.applicationInsights.iKey)
   .setAutoCollectRequests(false)
+  .setAutoCollectPerformance(false)
   .start()
 const AppInsightsStream = require('./logger/appInsightsStream')(appInsights.client)
 const logger = require('./logger/logger')()
