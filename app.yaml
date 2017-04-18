@@ -10,8 +10,12 @@ beta_settings:
   # the Instance details page in the Google Cloud Platform Console.
   cloud_sql_instances: dotted-vim-164110:us-east1:eureka-dev
 
+# Instance resources size
+resources:
+  cpu: 1
+  memory_gb: 1
+  disk_size_gb: 10
 # Disable auto-scale
-instance_class: B1
 manual_scaling:
   instances: 1
 
