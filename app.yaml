@@ -2,7 +2,7 @@ runtime: nodejs
 env: flex
 service: default
 env_variables:
-  APPINSIGHTS_INSTRUMENTATIONKEY: 20f0c386-44e4-4eea-97be-2644299652e5
+  APPINSIGHTS_INSTRUMENTATIONKEY: 2258b7bb-b7f9-4497-899c-3b3493a64ac8
   EUREKA_ENV: dev
 beta_settings:
   # The connection name of your instance, available by using
