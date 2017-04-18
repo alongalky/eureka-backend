@@ -37,6 +37,7 @@ module.exports = ({ database, config }) => ({
         })
         .catch(err => {
           logger.error(err)
+          res.sendStatus(500)
         })
     })
   },
