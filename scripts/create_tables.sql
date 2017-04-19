@@ -17,6 +17,7 @@ CREATE TABLE machines
 (
   `machine_id` VARCHAR(45) NOT NULL,
   `name` VARCHAR(255) NOT NULL,
+  `ssh_address` VARCHAR(255) NOT NULL,
   `account_id` VARCHAR(45) NOT NULL,
   PRIMARY KEY (machine_id),
   FOREIGN KEY (account_id) REFERENCES accounts(account_id)

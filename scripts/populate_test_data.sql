@@ -3,5 +3,6 @@ INSERT INTO `accounts` (`account_id`, `name`, `key`, `secret`, `public_key`, `fi
 INSERT INTO `accounts` 
   VALUES ('f197ac60-596e-4365-bd55-7b11d07a4482','Another Account','Key2','Secret2','Public Key 1','Poor','Bob','poor.bob@mailinator.com','1.0',1);
 
-INSERT INTO `machines` (`machine_id`, `name`, `account_id`) VALUES ('e3fbb152-909d-489b-a385-2e96d12d77fe', 'machina1', '93506318-da47-499e-a6f4-c43bdc1f1eae');
-INSERT INTO `machines` (`machine_id`, `name`, `account_id`) VALUES ('0f89a48f-6fd7-408d-9a8f-f357a38ed880', 'machina2', 'f197ac60-596e-4365-bd55-7b11d07a4482');
+INSERT INTO `machines` (`machine_id`, `name`, `account_id`, `ssh_address`) VALUES
+ ('e3fbb152-909d-489b-a385-2e96d12d77fe', 'machina1', '93506318-da47-499e-a6f4-c43bdc1f1eae', '1.1.1.1:1'),
+ ('0f89a48f-6fd7-408d-9a8f-f357a38ed880', 'machina2', 'f197ac60-596e-4365-bd55-7b11d07a4482', '1.1.1.1:2');
