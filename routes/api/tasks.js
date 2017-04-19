@@ -51,7 +51,7 @@ module.exports = ({database, cloud, tiers}) => {
       // Validation
       req.checkBody('command', 'Expected command between 1 to 255 characters').notEmpty().isLength({min: 1, max: 255})
       req.checkBody('output', 'Missing output folder').notEmpty().isLength({min: 1, max: 255})
-      req.checkBody('machine', 'Missing machine').notEmpty().isLength({min: 1, max: 255})
+      req.checkBody('machineName', 'Missing machineName').notEmpty().isLength({min: 1, max: 255})
       req.checkBody('taskName', 'Missing taskName').notEmpty().isLength({min: 1, max: 255})
       const tierNames = tiers.map(t => t.name)
       req.checkBody('tier', `Incorrect tier: options are ${tierNames.join(', ')}`).notEmpty().isIn(tierNames)
@@ -64,7 +64,7 @@ module.exports = ({database, cloud, tiers}) => {
         const params = {
           command: req.body.command,
           output: req.body.output,
-          machine: req.body.machine,
+          machineName: req.body.machineName,
           taskName: req.body.taskName,
           tier: req.body.tier,
           account: req.params.account_id

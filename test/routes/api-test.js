@@ -120,7 +120,7 @@ describe('API', () => {
     describe('POST /tasks', () => {
       const goodParams = {
         command: 'hello world',
-        machine: 'machina',
+        machineName: 'machina',
         taskName: 'tasky',
         tier: 'tiny',
         output: '/output'
@@ -145,7 +145,7 @@ describe('API', () => {
               sinon.assert.alwaysCalledWithMatch(database.tasks.addTask, {
                 command: 'hello world',
                 output: '/output',
-                machine: 'machina',
+                machineName: 'machina',
                 taskName: 'tasky',
                 tier: 'tiny',
                 account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91'
@@ -286,7 +286,7 @@ describe('API', () => {
       })
 
       describe('Parameter verification', () => {
-        for (let prop of ['command', 'output', 'machine', 'taskName']) {
+        for (let prop of ['command', 'output', 'machineName', 'taskName']) {
           it(`returns 422 when ${prop} is too long`, done => {
             const badParams = Object.assign({}, goodParams, { [prop]: 'h'.repeat(256) })
 
