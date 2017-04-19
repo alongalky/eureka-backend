@@ -14,5 +14,6 @@ function createLogger () {
       streams: []
     })
   }
-  return bunyan.createLogger({name: 'logger'})
+  module.exports.logger = bunyan.createLogger({name: 'logger'})
+  return module.exports.logger
 }
