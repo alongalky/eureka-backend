@@ -3,9 +3,9 @@ const apiRouter = express.Router()
 const accountsRouter = express.Router({mergeParams: true})
 const passport = require('passport')
 
-module.exports = ({ database, cloud, tiers, config, authStrategy }) => {
+module.exports = ({ database, cloud, config, authStrategy }) => {
   const machinesApi = require('./api/machines')({ database })
-  const tasksApi = require('./api/tasks')({ database, cloud, tiers })
+  const tasksApi = require('./api/tasks')({ database, cloud })
   const authenticateApi = require('./api/authenticate')({ database, config })
 
   apiRouter.get('/health-check', (req, res) => {

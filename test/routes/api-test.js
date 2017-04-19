@@ -9,7 +9,6 @@ const express = require('express')
 const expect = require('chai').expect
 const bodyParser = require('body-parser')
 const expressValidator = require('express-validator')
-const moment = require('moment')
 const passport = require('passport')
 const jwt = require('jsonwebtoken')
 
@@ -24,16 +23,16 @@ describe('API', () => {
     },
     accounts: {
       getAccount: sinon.stub(),
-      getAccountSecretKey: sinon.stub()
+      getAccountSecretKey: sinon.stub(),
+      getAccountSpendings: sinon.stub()
+    },
+    tiers: {
+      getTiers: sinon.stub()
     }
   }
   const cloud = {
     runTask: sinon.stub()
   }
-  const tiers = [{
-    name: 'tiny',
-    pricePerHourInCents: 60
-  }]
 
   let succeedAuthentication = true
   class FakeEurekaStrategy extends passport.Strategy {
@@ -58,7 +57,6 @@ describe('API', () => {
   const apiRouterParams = {
     database,
     cloud,
-    tiers,
     authStrategy,
     config
   }
@@ -82,6 +80,7 @@ describe('API', () => {
     database.tasks.addTask.reset()
     database.accounts.getAccount.reset()
     database.accounts.getAccountSecretKey.reset()
+    database.accounts.getAccountSpendings.reset()
     cloud.runTask.reset()
     succeedAuthentication = true
   })
@@ -126,15 +125,21 @@ describe('API', () => {
         output: '/output'
       }
 
+      const tiers = [{
+        tier_id: '12345',
+        name: 'tiny',
+        price_per_hour: 60
+      }]
       beforeEach(() => {
         database.tasks.addTask.resolves()
         database.tasks.getTasks.resolves([])
-        database.accounts.getAccount.resolves({
+        database.accounts.getAccountSpendings.resolves({
+          total_spent_in_dollars: 5,
           spending_quota: 100000
         })
-        cloud.runTask.returns(Promise.resolve())
+        database.tiers.getTiers.resolves(tiers)
+        cloud.runTask.resolves()
       })
-
       describe('Return codes', () => {
         it('returns 201 on happy flow', done => {
           supertest(app)
@@ -142,12 +147,13 @@ describe('API', () => {
             .send(goodParams)
             .expect(201)
             .end((err, res) => {
+              sinon.assert.calledOnce(database.accounts.getAccountSpendings)
               sinon.assert.alwaysCalledWithMatch(database.tasks.addTask, {
                 command: 'hello world',
                 output: '/output',
                 machineName: 'machina',
                 taskName: 'tasky',
-                tier: 'tiny',
+                tierId: '12345',
                 account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91'
               })
 
@@ -168,14 +174,14 @@ describe('API', () => {
             })
         })
         it('returns 500 when account retrieval database operation fails', done => {
-          database.accounts.getAccount.rejects(new Error('Crazy database error'))
+          database.accounts.getAccountSpendings.rejects(new Error('Crazy database error'))
 
           supertest(app)
             .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
             .send(goodParams)
             .expect(500)
             .end((err, res) => {
-              sinon.assert.calledOnce(database.accounts.getAccount)
+              sinon.assert.calledOnce(database.accounts.getAccountSpendings)
 
               done(err)
             })
@@ -196,13 +202,10 @@ describe('API', () => {
             })
         })
         it('returns 400 when account has overspent', done => {
-          // Quota of $100.00
-          database.accounts.getAccount.resolves({ spending_quota: 100 })
-          // 101 tasks, $1.00 each
-          database.tasks.getTasks.resolves(Array(101).fill({
-            tier: 'tiny',
-            timestamp_initializing: moment().subtract(100, 'minute').toDate()
-          }))
+          database.accounts.getAccountSpendings.resolves({
+            total_spent_in_dollars: 10,
+            spending_quota: 5
+          })
 
           supertest(app)
             .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
@@ -215,13 +218,10 @@ describe('API', () => {
             })
         })
         it('Happy flow when account has not overspent', done => {
-          // Quota of $100.00
-          database.accounts.getAccount.resolves({ spending_quota: 100 })
-          // 99 tasks, $1.00 each
-          database.tasks.getTasks.resolves(Array(99).fill({
-            tier: 'tiny',
-            timestamp_initializing: moment().subtract(100, 'minute').toDate()
-          }))
+          database.accounts.getAccountSpendings.resolves({
+            total_spent_in_dollars: 5,
+            spending_quota: 10
+          })
 
           supertest(app)
             .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
@@ -242,44 +242,6 @@ describe('API', () => {
             .expect(401)
             .end((err, res) => {
               sinon.assert.notCalled(database.tasks.addTask)
-              done(err)
-            })
-        })
-        it('returns 400 when account has overspent', done => {
-          // Quota of $100.00
-          database.accounts.getAccount.resolves({ spending_quota: 100 })
-          // 101 tasks, $1.00 each
-          database.tasks.getTasks.resolves(Array(101).fill({
-            tier: 'tiny',
-            timestamp_initializing: moment().subtract(100, 'minute').toDate()
-          }))
-
-          supertest(app)
-            .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
-            .send(goodParams)
-            .expect(400)
-            .end((err, res) => {
-              sinon.assert.notCalled(database.tasks.addTask)
-
-              done(err)
-            })
-        })
-        it('Happy flow when account has not overspent', done => {
-          // Quota of $100.00
-          database.accounts.getAccount.resolves({ spending_quota: 100 })
-          // 99 tasks, $1.00 each
-          database.tasks.getTasks.resolves(Array(99).fill({
-            tier: 'tiny',
-            timestamp_initializing: moment().subtract(100, 'minute').toDate()
-          }))
-
-          supertest(app)
-            .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
-            .send(goodParams)
-            .expect(201)
-            .end((err, res) => {
-              sinon.assert.calledOnce(database.tasks.addTask)
-
               done(err)
             })
         })
@@ -315,11 +277,9 @@ describe('API', () => {
           })
         }
         it('returns 422 when accounts is not a valid UUID', done => {
-          const badParams = Object.assign({}, goodParams, { taskName: undefined })
-
           supertest(app)
             .post('/api/accounts/1234/tasks')
-            .send(badParams)
+            .send(goodParams)
             .expect(422)
             .end((err, res) => {
               sinon.assert.notCalled(database.tasks.addTask)
@@ -345,14 +305,19 @@ describe('API', () => {
 
     describe('GET /tasks', () => {
       it('returns 200 on happy flow', done => {
-        database.tasks.getTasks.returns(Promise.resolve([
-          {
-            tier: 'tiny'
-          },
-          {
-            tier: 'tiny'
-          }
-        ]))
+        const goodTask = {
+          duration_in_seconds: 60 * 60 * 2, // 2 hours
+          price_per_hour_in_dollars: 2,
+          total_spent_in_dollars: 4,
+          name: 'good-task',
+          command: '/run/wild',
+          status: 'Initializing',
+          machine_name: 'machine17',
+          tier: 'tiny',
+          timestamp_initializing: new Date().toString(),
+          timestamp_done: new Date().toString()
+        }
+        database.tasks.getTasks.resolves([ goodTask, goodTask ])
 
         supertest(app)
           .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
@@ -361,50 +326,17 @@ describe('API', () => {
             expect(res.body).to.not.be.empty
             expect(res.body).to.have.lengthOf(2)
             sinon.assert.calledWithMatch(database.tasks.getTasks, { account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91' })
-
-            done(err)
-          })
-      })
-      it('calculates duration & cost correctly when task has timestamp_done', done => {
-        const start = moment()
-        const end = moment().add(2, 'minute')
-
-        database.tasks.getTasks.returns(Promise.resolve([
-          {
-            tier: 'tiny',
-            timestamp_initializing: start.toDate(),
-            timestamp_done: end.toDate()
-          }
-        ]))
-
-        supertest(app)
-          .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
-          .expect(200)
-          .end((err, res) => {
-            expect(res.body).to.have.length(1)
-            expect(res.body[0].durationInSeconds).to.be.equal(120)
-            expect(res.body[0].costInCents).to.be.equal(2)
-
-            done(err)
-          })
-      })
-      it('calculates duration & cost correctly when task does not have timestamp_done', done => {
-        const start = moment().subtract(10, 'minutes')
-
-        database.tasks.getTasks.returns(Promise.resolve([
-          {
-            tier: 'tiny',
-            timestamp_initializing: start.toDate()
-          }
-        ]))
-
-        supertest(app)
-          .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
-          .expect(200)
-          .end((err, res) => {
-            expect(res.body).to.have.length(1)
-            expect(res.body[0].durationInSeconds).to.be.approximately(10 * 60, 2)
-            expect(res.body[0].costInCents).to.be.approximately(10, 1)
+            expect(res.body[0]).to.deep.equal({
+              name: goodTask.name,
+              command: goodTask.command,
+              status: goodTask.status,
+              machineName: goodTask.machine_name,
+              timestamp_initializing: goodTask.timestamp_initializing,
+              timestamp_done: goodTask.timestamp_done,
+              tier: goodTask.tier,
+              durationInSeconds: 2 * 60 * 60,
+              costInCents: 400.0
+            })
 
             done(err)
           })

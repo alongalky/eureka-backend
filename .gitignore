@@ -38,11 +38,5 @@ jspm_packages
 
 tags
 
-# Elastic Beanstalk Files
-
-.elasticbeanstalk/*
-
-!.elasticbeanstalk/*.cfg.yml
-
-!.elasticbeanstalk/*.global.yml
-
+# Visual Studio Code settings
+.vscode
