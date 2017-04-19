@@ -1,19 +1,15 @@
+const moment = require('moment')
 const util = require('util')
 const logger = require('../../logger/logger')()
 
 module.exports = ({ database, cloud }) => {
-  const failIfQuotaExceeded = spendings => {
-    if (spendings.total_spent_in_dollars > spendings.spending_quota) {
-      logger.info(`Account ${spendings.account_id} has exceeded its quota. ` +
-        `Total spent: $ ${spendings.total_spent_in_dollars}, Quota: $ ${spendings.spending_quota}`)
+  const addDurationAndCost = task => {
+    const endTime = task.timestamp_done ? moment(task.timestamp_done) : moment()
+    const durationInSeconds = endTime.diff(moment(task.timestamp_initializing), 'seconds')
+    const durationInMinutesRoundedUp = Math.ceil(durationInSeconds / 60.0)
+    const costInCents = (durationInMinutesRoundedUp / 60.0) * task.price_per_hour_in_cent
 
-      const err = new Error(`Spending quota exceeded`)
-      err.type = 'spending_quota_exceeded'
-
-      return Promise.reject(err)
-    } else {
-      return Promise.resolve()
-    }
+    return Object.assign({}, task, { durationInSeconds, costInCents })
   }
 
   return {
@@ -34,8 +30,24 @@ module.exports = ({ database, cloud }) => {
                 return res.status(422).send('There have been validation errors: ' + util.inspect(result.array()))
               }
 
-              return database.accounts.getAccountSpendings(req.params.account_id)
-                .then(spendings => failIfQuotaExceeded(spendings))
+              return database.tasks.getTasks(req.params.account_id)
+                .then(tasks => {
+                  if (tasks.length === 0) {
+                    return
+                  }
+                  const totalSpentInDollars = tasks
+                    .map(addDurationAndCost)
+                    .map(t => t.costInCents)
+                    .reduce((x, y) => x + y, 0) / 100.0
+                  if (totalSpentInDollars > tasks[0].spending_quota) {
+                    logger.info(`Account ${req.params.account_id} has exceeded its quota. ` +
+                      `Total spent: $ ${totalSpentInDollars}, Quota: $ ${tasks[0].spending_quota}`)
+
+                    const err = new Error(`Spending quota exceeded`)
+                    err.type = 'spending_quota_exceeded'
+                    throw err
+                  }
+                })
                 .then(() => {
                   const tierId = tiers.find(t => t.name === req.body.tier).tier_id
                   const params = {
@@ -76,17 +88,19 @@ module.exports = ({ database, cloud }) => {
         database.tasks.getTasks({
           account: req.params.account_id
         }).then(allTasks => {
-          const formattedTasks = allTasks.map(t => ({
-            name: t.name,
-            command: t.command,
-            status: t.status,
-            machineName: t.machine_name,
-            timestamp_initializing: t.timestamp_initializing,
-            timestamp_done: t.timestamp_done,
-            tier: t.tier,
-            durationInSeconds: t.duration_in_seconds,
-            costInCents: (t.total_spent_in_dollars * 100.0)
-          }))
+          const formattedTasks = allTasks
+            .map(addDurationAndCost)
+            .map(task => ({
+              name: task.name,
+              command: task.command,
+              status: task.status,
+              machineName: task.machine_name,
+              timestamp_initializing: task.timestamp_initializing,
+              timestamp_done: task.timestamp_done,
+              tier: task.tier,
+              durationInSeconds: task.durationInSeconds,
+              costInCents: task.costInCents
+            }))
           return res.json(formattedTasks)
         })
         .catch(err => {

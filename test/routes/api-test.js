@@ -9,6 +9,7 @@ const express = require('express')
 const expect = require('chai').expect
 const bodyParser = require('body-parser')
 const expressValidator = require('express-validator')
+const moment = require('moment')
 const passport = require('passport')
 const jwt = require('jsonwebtoken')
 
@@ -23,8 +24,7 @@ describe('API', () => {
     },
     accounts: {
       getAccount: sinon.stub(),
-      getAccountSecretKey: sinon.stub(),
-      getAccountSpendings: sinon.stub()
+      getAccountSecretKey: sinon.stub()
     },
     tiers: {
       getTiers: sinon.stub()
@@ -80,7 +80,6 @@ describe('API', () => {
     database.tasks.addTask.reset()
     database.accounts.getAccount.reset()
     database.accounts.getAccountSecretKey.reset()
-    database.accounts.getAccountSpendings.reset()
     cloud.runTask.reset()
     succeedAuthentication = true
   })
@@ -133,10 +132,6 @@ describe('API', () => {
       beforeEach(() => {
         database.tasks.addTask.resolves()
         database.tasks.getTasks.resolves([])
-        database.accounts.getAccountSpendings.resolves({
-          total_spent_in_dollars: 5,
-          spending_quota: 100000
-        })
         database.tiers.getTiers.resolves(tiers)
         cloud.runTask.resolves()
       })
@@ -147,7 +142,7 @@ describe('API', () => {
             .send(goodParams)
             .expect(201)
             .end((err, res) => {
-              sinon.assert.calledOnce(database.accounts.getAccountSpendings)
+              sinon.assert.calledOnce(database.tasks.getTasks)
               sinon.assert.alwaysCalledWithMatch(database.tasks.addTask, {
                 command: 'hello world',
                 output: '/output',
@@ -173,15 +168,15 @@ describe('API', () => {
               done(err)
             })
         })
-        it('returns 500 when account retrieval database operation fails', done => {
-          database.accounts.getAccountSpendings.rejects(new Error('Crazy database error'))
+        it('returns 500 when tasks retrieval database operation fails', done => {
+          database.tasks.getTasks.rejects(new Error('Crazy database error'))
 
           supertest(app)
             .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
             .send(goodParams)
             .expect(500)
             .end((err, res) => {
-              sinon.assert.calledOnce(database.accounts.getAccountSpendings)
+              sinon.assert.calledOnce(database.tasks.getTasks)
 
               done(err)
             })
@@ -202,10 +197,15 @@ describe('API', () => {
             })
         })
         it('returns 400 when account has overspent', done => {
-          database.accounts.getAccountSpendings.resolves({
-            total_spent_in_dollars: 10,
-            spending_quota: 5
-          })
+          const endTime = moment()
+          const startTime = endTime.clone().subtract(1, 'hour')
+          const oneDollarTask = {
+            spending_quota: 10,
+            price_per_hour_in_cent: 100,
+            timestamp_initializing: startTime.toISOString(),
+            timestamp_done: endTime.toISOString()
+          }
+          database.tasks.getTasks.resolves(Array(11).fill(oneDollarTask))
 
           supertest(app)
             .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
@@ -218,10 +218,15 @@ describe('API', () => {
             })
         })
         it('Happy flow when account has not overspent', done => {
-          database.accounts.getAccountSpendings.resolves({
-            total_spent_in_dollars: 5,
-            spending_quota: 10
-          })
+          const endTime = moment()
+          const startTime = endTime.clone().subtract(1, 'hour')
+          const oneDollarTask = {
+            spending_quota: 10,
+            price_per_hour_in_cent: 100,
+            timestamp_initializing: startTime.toISOString(),
+            timestamp_done: endTime.toISOString()
+          }
+          database.tasks.getTasks.resolves(Array(9).fill(oneDollarTask))
 
           supertest(app)
             .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
@@ -305,17 +310,18 @@ describe('API', () => {
 
     describe('GET /tasks', () => {
       it('returns 200 on happy flow', done => {
+        const endTime = moment()
+        const startTime = endTime.clone().subtract(10, 'hour')
         const goodTask = {
-          duration_in_seconds: 60 * 60 * 2, // 2 hours
-          price_per_hour_in_dollars: 2,
-          total_spent_in_dollars: 4,
+          price_per_hour_in_cent: 200,
           name: 'good-task',
           command: '/run/wild',
           status: 'Initializing',
           machine_name: 'machine17',
           tier: 'tiny',
-          timestamp_initializing: new Date().toString(),
-          timestamp_done: new Date().toString()
+          tier_id: '12345',
+          timestamp_initializing: startTime.toISOString(),
+          timestamp_done: endTime.toISOString()
         }
         database.tasks.getTasks.resolves([ goodTask, goodTask ])
 
@@ -334,9 +340,79 @@ describe('API', () => {
               timestamp_initializing: goodTask.timestamp_initializing,
               timestamp_done: goodTask.timestamp_done,
               tier: goodTask.tier,
-              durationInSeconds: 2 * 60 * 60,
-              costInCents: 400.0
+              durationInSeconds: 10 * 60 * 60,
+              costInCents: 2000
             })
+
+            done(err)
+          })
+      })
+      it('calculates duration & cost correctly when task has timestamp_done', done => {
+        const start = moment()
+        const end = moment().clone().add(2, 'minute')
+
+        database.tasks.getTasks.resolves([
+          {
+            tier: 'tiny',
+            timestamp_initializing: start.toISOString(),
+            timestamp_done: end.toISOString(),
+            price_per_hour_in_cent: 60
+          }
+        ])
+
+        supertest(app)
+          .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .expect(200)
+          .end((err, res) => {
+            expect(res.body).to.have.length(1)
+            expect(res.body[0].durationInSeconds).to.be.equal(120)
+            expect(res.body[0].costInCents).to.be.equal(2)
+
+            done(err)
+          })
+      })
+      it('calculates duration & cost correctly when task does not have timestamp_done', done => {
+        const start = moment().subtract(10, 'minutes')
+
+        database.tasks.getTasks.resolves([
+          {
+            tier: 'tiny',
+            timestamp_initializing: start.toISOString(),
+            price_per_hour_in_cent: 60.0
+          }
+        ])
+
+        supertest(app)
+          .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .expect(200)
+          .end((err, res) => {
+            expect(res.body).to.have.length(1)
+            expect(res.body[0].durationInSeconds).to.be.approximately(10 * 60, 2)
+            expect(res.body[0].costInCents).to.be.approximately(10, 1)
+
+            done(err)
+          })
+      })
+      it('rounds minutes up for billing purposes', done => {
+        const start = moment()
+        const end = moment().clone().add(1.5, 'minute')
+
+        database.tasks.getTasks.resolves([
+          {
+            tier: 'tiny',
+            timestamp_initializing: start.toISOString(),
+            timestamp_done: end.toISOString(),
+            price_per_hour_in_cent: 60
+          }
+        ])
+
+        supertest(app)
+          .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .expect(200)
+          .end((err, res) => {
+            expect(res.body).to.have.length(1)
+            expect(res.body[0].durationInSeconds).to.be.equal(90)
+            expect(res.body[0].costInCents).to.be.equal(2)
 
             done(err)
           })

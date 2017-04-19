@@ -5,17 +5,14 @@ const getTasks = ({account}) => {
   // This query rounds the duration up to the nearest minute when calculating cost,
   // but returns the duration in seconds.
   const query = `
-    SELECT *, CEILING(duration_in_seconds / 60.0) * (t.price_per_hour_in_dollars / 60.0) as total_spent_in_dollars FROM
-    (
-      SELECT tasks.name, tasks.command, tasks.status, machines.name AS machine_name, tasks.tier_id as tier_id, tiers.name as tier,
-        timestamp_initializing, timestamp_done, (tiers.price_per_hour_in_cent / 100.0) as price_per_hour_in_dollars,
-        TIMESTAMPDIFF(SECOND, tasks.timestamp_initializing, COALESCE(tasks.timestamp_done, NOW())) AS duration_in_seconds
-      FROM accounts
-      INNER JOIN machines ON accounts.account_id = machines.account_id
-      INNER JOIN tasks ON tasks.machine_id = machines.machine_id
-      INNER JOIN tiers ON tasks.tier_id = tiers.tier_id
-      WHERE accounts.account_id = ?
-    ) t`
+    SELECT tasks.name, tasks.command, tasks.status, machines.name AS machine_name,
+      tasks.tier_id as tier_id, tiers.name as tier, timestamp_initializing,
+      timestamp_done, tiers.price_per_hour_in_cent, accounts.spending_quota
+    FROM accounts
+    INNER JOIN machines ON accounts.account_id = machines.account_id
+    INNER JOIN tasks ON tasks.machine_id = machines.machine_id
+    INNER JOIN tiers ON tasks.tier_id = tiers.tier_id
+    WHERE accounts.account_id = ?`
 
   return connection().query(query, [account])
     .then(([rows, fields]) => rows)
