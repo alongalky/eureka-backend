@@ -14,7 +14,7 @@ const getTasks = ({account}) => {
     .then(([rows, fields]) => rows)
 }
 
-const addTask = ({command, output, machine, taskName, tier, account}) => {
+const addTask = ({command, output, machineName, taskName, tier, account}) => {
   const findMachineIdQuery =
     'SELECT machines.machine_id ' +
     'FROM machines ' +
@@ -26,10 +26,10 @@ const addTask = ({command, output, machine, taskName, tier, account}) => {
     'INSERT INTO tasks (`task_id`, `name`, `status`, `command`, `timestamp_initializing`, `tier`, `machine_id`) ' +
     'VALUES (?, ?, ?, ?, ?, ?, ?)'
 
-  return connection().query(findMachineIdQuery, [machine, account])
+  return connection().query(findMachineIdQuery, [machineName, account])
     .then(([rows, fields]) => {
       if (rows.length === 0) {
-        const err = new Error(`Machine ${machine} does not exist`)
+        const err = new Error(`Machine ${machineName} does not exist`)
         err.type = 'machine_not_exists'
         throw err
       } else {
