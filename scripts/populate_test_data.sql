@@ -4,5 +4,5 @@ INSERT INTO `accounts`
   VALUES ('f197ac60-596e-4365-bd55-7b11d07a4482','Another Account','Key2','Secret2','Public Key 1','Poor','Bob','poor.bob@mailinator.com','1.0',1);
 
 INSERT INTO `machines` (`machine_id`, `name`, `account_id`, `vm_id`, `container_id`, `ssh_port`) VALUES
- ('e3fbb152-909d-489b-a385-2e96d12d77fe', 'machina1', '93506318-da47-499e-a6f4-c43bdc1f1eae', '3719268541868467956', 'e23f4c219624', '2004'),
- ('0f89a48f-6fd7-408d-9a8f-f357a38ed880', 'machina2', 'f197ac60-596e-4365-bd55-7b11d07a4482', '3719268541868467956', '1cada835d743', '2005');
+ ('e3fbb152-909d-489b-a385-2e96d12d77fe', 'machina1', '93506318-da47-499e-a6f4-c43bdc1f1eae', 'machinas', 'e23f4c219624', '2004'),
+ ('0f89a48f-6fd7-408d-9a8f-f357a38ed880', 'machina2', 'f197ac60-596e-4365-bd55-7b11d07a4482', 'machinas', '1cada835d743', '2005');

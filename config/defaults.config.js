@@ -1,6 +1,9 @@
 module.exports = {
   cloud_provider: 'google',
   docker_port: 2375,
+  docker_image_ssh: 'jeroenpeeters/docker-ssh',
+  docker_reserved_portrange_ssh: '2000-3000',
+  docker_reserved_portrange_webssh: '8000-9000',
   aws: {
     region: 'us-west-2'
   },

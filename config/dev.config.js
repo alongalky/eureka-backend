@@ -6,7 +6,8 @@ const instanceName = 'dotted-vim-164110:us-east1:eureka-dev'
 module.exports = {
   google: {
     project: 'dotted-vim-164110',
-    instance_image: 'docker-enabled-nowrapping'
+    instance_image: 'docker-enabled-nowrapping',
+    docker_registry: 'us.gcr.io'
   },
   database: {
     connectionLimit: 10,
@@ -15,7 +16,7 @@ module.exports = {
     user,
     password,
     database,
-    socketPath: `/cloudsql/${instanceName}`
+//    socketPath: `/cloudsql/${instanceName}`
   },
   applicationInsights: {
     iKey: process.env.APPINSIGHTS_INSTRUMENTATIONKEY
