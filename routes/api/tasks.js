@@ -39,9 +39,11 @@ module.exports = ({ database, cloud }) => {
                     .map(addDurationAndCost)
                     .map(t => t.costInCents)
                     .reduce((x, y) => x + y, 0) / 100.0
-                  if (totalSpentInDollars > tasks[0].spending_quota) {
+
+                  const accountSpendingQuota = tasks[0].spending_quota
+                  if (totalSpentInDollars > accountSpendingQuota) {
                     logger.info(`Account ${req.params.account_id} has exceeded its quota. ` +
-                      `Total spent: $ ${totalSpentInDollars}, Quota: $ ${tasks[0].spending_quota}`)
+                      `Total spent: $ ${totalSpentInDollars}, Quota: $ ${accountSpendingQuota}`)
 
                     const err = new Error(`Spending quota exceeded`)
                     err.type = 'spending_quota_exceeded'
