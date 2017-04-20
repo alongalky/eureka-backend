@@ -2,92 +2,74 @@ const moment = require('moment')
 const util = require('util')
 const logger = require('../../logger/logger')()
 
-module.exports = ({database, cloud, tiers}) => {
-  const failIfQuotaExceeded = ({ account, totalCostInCents }) => {
-    const quotaInDollars = parseFloat(account.spending_quota)
-    const didAccountExceededSpendingQuota =
-      totalCostInCents / 100.0 > quotaInDollars
+module.exports = ({ database, cloud }) => {
+  const addDurationAndCost = task => {
+    const endTime = task.timestamp_done ? moment(task.timestamp_done) : moment()
+    const durationInSeconds = endTime.diff(moment(task.timestamp_initializing), 'seconds')
+    const durationInMinutesRoundedUp = Math.ceil(durationInSeconds / 60.0)
+    const costInCents = (durationInMinutesRoundedUp / 60.0) * task.price_per_hour_in_cent
 
-    if (didAccountExceededSpendingQuota) {
-      logger.info(`Account ${account.account_id} has exceeded its quota. ` +
-        `Total spent: $ ${totalCostInCents / 100.0}, Quota: $ ${quotaInDollars}`)
-
-      const err = new Error(`Spending quota exceeded`)
-      err.type = 'spending_quota_exceeded'
-      return Promise.reject(err)
-    } else {
-      return Promise.resolve()
-    }
+    return Object.assign({}, task, { durationInSeconds, costInCents })
   }
-
-  const addTaskDuration = task => {
-    const start = moment(task.timestamp_initializing)
-
-    let end
-    if (task.timestamp_done) {
-      end = moment(task.timestamp_done)
-    } else {
-      end = moment()
-    }
-
-    task.durationInSeconds = end.diff(start, 'seconds')
-    return task
-  }
-
-  const addCost = task => {
-    const tier = tiers.find(t => t.name === task.tier)
-    if (!tier) {
-      throw new Error(`Invalid tier found for task ${task.task_id}`)
-    }
-
-    task.costInCents = tier.pricePerHourInCents * (task.durationInSeconds / (60.0 * 60.0))
-    return task
-  }
-
-  const addTaskCostAndDuration = task => addCost(addTaskDuration(task))
 
   return {
-    addTask: (req, res) => {
-      // Validation
-      req.checkBody('command', 'Expected command between 1 to 255 characters').notEmpty().isLength({min: 1, max: 255})
-      req.checkBody('output', 'Missing output folder').notEmpty().isLength({min: 1, max: 255})
-      req.checkBody('machineName', 'Missing machineName').notEmpty().isLength({min: 1, max: 255})
-      req.checkBody('taskName', 'Missing taskName').notEmpty().isLength({min: 1, max: 255})
-      const tierNames = tiers.map(t => t.name)
-      req.checkBody('tier', `Incorrect tier: options are ${tierNames.join(', ')}`).notEmpty().isIn(tierNames)
+    addTask: (req, res) =>
+      database.tiers.getTiers()
+        .then(tiers => {
+          // Validation
+          req.checkBody('command', 'Expected command between 1 to 255 characters').notEmpty().isLength({min: 1, max: 255})
+          req.checkBody('output', 'Missing output folder').notEmpty().isLength({min: 1, max: 255})
+          req.checkBody('machineName', 'Missing machineName').notEmpty().isLength({min: 1, max: 255})
+          req.checkBody('taskName', 'Missing taskName').notEmpty().isLength({min: 1, max: 255})
+          const tierNames = tiers.map(t => t.name)
+          req.checkBody('tier', `Incorrect tier: options are ${tierNames.join(', ')}`).notEmpty().isIn(tierNames)
 
-      req.getValidationResult().then(result => {
-        if (!result.isEmpty()) {
-          return res.status(422).send('There have been validation errors: ' + util.inspect(result.array()))
-        }
+          return req.getValidationResult()
+            .then(result => {
+              if (!result.isEmpty()) {
+                return res.status(422).send('There have been validation errors: ' + util.inspect(result.array()))
+              }
 
-        const params = {
-          command: req.body.command,
-          output: req.body.output,
-          machineName: req.body.machineName,
-          taskName: req.body.taskName,
-          tier: req.body.tier,
-          account: req.params.account_id
-        }
+              return database.tasks.getTasks(req.params.account_id)
+                .then(tasks => {
+                  if (tasks.length === 0) {
+                    return
+                  }
+                  const totalSpentInDollars = tasks
+                    .map(addDurationAndCost)
+                    .map(t => t.costInCents)
+                    .reduce((x, y) => x + y, 0) / 100.0
 
-        database.tasks.getTasks({
-          account: req.params.account_id
-        })
-        .then(tasks => {
-          const totalCostInCents = tasks
-            .map(addTaskCostAndDuration)
-            .map(task => task.costInCents)
-            .reduce((sum, val) => val + sum, 0)
+                  const accountSpendingQuota = tasks[0].spending_quota
+                  if (totalSpentInDollars > accountSpendingQuota) {
+                    logger.info(`Account ${req.params.account_id} has exceeded its quota. ` +
+                      `Total spent: $ ${totalSpentInDollars}, Quota: $ ${accountSpendingQuota}`)
 
-          return database.accounts.getAccount(params.account)
-            .then(account => failIfQuotaExceeded({ account, totalCostInCents }))
-        })
-        .then(() => database.tasks.addTask(params))
-        .then(taskId => {
-          res.status(201).send({message: 'Task queued successfuly'})
-          // This call could fail against the API, but we return a 201 anyway.
-          // Instance is transitioned to Error status in case of an API error.
-          cloud.runTask(taskId, params)
+                    const err = new Error(`Spending quota exceeded`)
+                    err.type = 'spending_quota_exceeded'
+                    throw err
+                  }
+                })
+                .then(() => {
+                  const tierId = tiers.find(t => t.name === req.body.tier).tier_id
+                  const params = {
+                    command: req.body.command,
+                    output: req.body.output,
+                    machineName: req.body.machineName,
+                    taskName: req.body.taskName,
+                    tierId,
+                    account: req.params.account_id
+                  }
+
+                  return database.tasks.addTask(params)
+                    .then(taskId => {
+                      res.status(201).send({message: 'Task queued successfuly'})
+                      // This call could fail against the API, but we return a 201 anyway.
+                      // Instance is transitioned to Error status in case of an API error.
+                      cloud.runTask(taskId, params)
+                    })
+                })
+            })
         }).catch(err => {
           if (err.type === 'machine_not_exists') {
             res.status(404).send('Machine not found')
@@ -97,9 +79,7 @@ module.exports = ({database, cloud, tiers}) => {
             logger.error(err)
             res.status(500).send('Failed to add task')
           }
-        })
-      })
-    },
+        }),
     getTasks: (req, res) =>
       req.getValidationResult().then(result => {
         if (!result.isEmpty()) {
@@ -109,7 +89,22 @@ module.exports = ({database, cloud, tiers}) => {
 
         database.tasks.getTasks({
           account: req.params.account_id
-        }).then(allTasks => res.json(allTasks.map(addTaskCostAndDuration)))
+        }).then(allTasks => {
+          const formattedTasks = allTasks
+            .map(addDurationAndCost)
+            .map(task => ({
+              name: task.name,
+              command: task.command,
+              status: task.status,
+              machineName: task.machine_name,
+              timestamp_initializing: task.timestamp_initializing,
+              timestamp_done: task.timestamp_done,
+              tier: task.tier,
+              durationInSeconds: task.durationInSeconds,
+              costInCents: task.costInCents
+            }))
+          return res.json(formattedTasks)
+        })
         .catch(err => {
           logger.error(err)
           res.status(500).send('Failed to get tasks')

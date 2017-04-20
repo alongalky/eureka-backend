@@ -34,7 +34,6 @@ const cloud = require('./cloud/agnostic')({ config, database, Dockerode, control
 const apiRouter = require('./routes/api')({
   database,
   cloud,
-  tiers: config.tiers,
   config,
   authStrategy: apiAuthenticate.Strategy()
 })

@@ -8,7 +8,7 @@ CREATE TABLE accounts
   `first_name` VARCHAR(255) NOT NULL,
   `last_name` VARCHAR(255) NOT NULL,
   `email` VARCHAR(255) NOT NULL,
-  `spending_quota` decimal(15,2) NOT NULL,
+  `spending_quota` DECIMAL(19,4) NOT NULL,
   `vm_quota` INT NOT NULL,
   PRIMARY KEY (account_id)
 );
@@ -25,6 +25,19 @@ CREATE TABLE machines
   FOREIGN KEY (account_id) REFERENCES accounts(account_id)
 );
 
+CREATE TABLE tiers
+(
+  `tier_id` VARCHAR(45) NOT NULL,
+  `price_per_hour_in_cent` DECIMAL(19,4) NOT NULL,
+  `name` VARCHAR(255) NOT NULL,
+  `memory_gb` DECIMAL(19,4) NOT NULL,
+  `cpu_count` INT NOT NULL,
+  `local_disk_gb` INT NOT NULL,
+  `ssd_disk_gb` INT NOT NULL,
+  `cloud_storage_gb` INT NOT NULL,
+  PRIMARY KEY (tier_id)
+);
+
 CREATE TABLE tasks
 (
   `task_id` VARCHAR(45) NOT NULL,
@@ -34,8 +47,10 @@ CREATE TABLE tasks
   `timestamp_initializing` DATETIME NOT NULL,
   `timestamp_running` DATETIME DEFAULT NULL,
   `timestamp_done` DATETIME DEFAULT NULL,
-  `tier` VARCHAR(45) NOT NULL,
   `machine_id` VARCHAR(45) NOT NULL,
+  `tier_id` VARCHAR(45) NOT NULL,
   PRIMARY KEY (task_id),
-  FOREIGN KEY (machine_id) REFERENCES machines(machine_id)
+  FOREIGN KEY (machine_id) REFERENCES machines(machine_id),
+  FOREIGN KEY (tier_id) REFERENCES tiers(tier_id),
+  UNIQUE (name, machine_id)
 );
