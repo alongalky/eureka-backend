@@ -1,6 +1,7 @@
 # Eureka backend
 ## Metrics and analytics
 Access analytics through Azure Application Insights, using the following:
+
 - [local](https://analytics.applicationinsights.io/subscriptions/fcb1f62a-582d-445d-89b4-f555390ff683/resourcegroups/eureka-local/components/eureka-local#/discover/home?apptype=Node.JS) environment
 - [dev](https://analytics.applicationinsights.io/subscriptions/fcb1f62a-582d-445d-89b4-f555390ff683/resourcegroups/eureka-dev/components/eureka-dev#/discover/home?apptype=Node.JS) environment
 
