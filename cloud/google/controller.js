@@ -28,6 +28,7 @@ module.exports = ({ config, gce, gAuth }) => {
     resolveInstanceExternalIp: instanceId => gZone.vm(instanceId).get().then(([vm]) => vm.metadata.networkInterfaces[0].accessConfigs[0].natIP),
     runInstance: (taskId, params) => {
       const instanceConfig = {
+        // TODO: change to actual instance type specified in params
         machineType: 'f1-micro',
         disks: [ {
           boot: true,
@@ -132,10 +133,10 @@ module.exports = ({ config, gce, gAuth }) => {
             logger.info('Succesfully pushed', remoteImageName)
             return remoteImageName
           })
-          .catch(err => {
-            logger.error('Unable to push image', err)
-            throw err
-          })
+        })
+        .catch(err => {
+          logger.error('Unable to push image', err)
+          return Promise.reject(err)
         })
     },
     pullImage: ({ docker, image }) => {
@@ -166,10 +167,10 @@ module.exports = ({ config, gce, gAuth }) => {
           logger.info('Succesfully pulled', image)
           return image
         })
-        .catch(err => {
-          logger.error('Unable to pull image', err)
-          throw err
-        })
+      })
+      .catch(err => {
+        logger.error('Unable to pull image', err)
+        throw err
       })
     }
   }

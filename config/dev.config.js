@@ -16,7 +16,7 @@ module.exports = {
     user,
     password,
     database,
-//    socketPath: `/cloudsql/${instanceName}`
+    socketPath: `/cloudsql/${instanceName}`
   },
   applicationInsights: {
     iKey: process.env.APPINSIGHTS_INSTRUMENTATIONKEY
