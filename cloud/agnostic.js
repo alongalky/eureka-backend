@@ -2,6 +2,7 @@ const moment = require('moment')
 const logger = require('../logger/logger')()
 
 module.exports = ({ config, database, Dockerode, controller, persevere }) => {
+  const addCleanupToCommand = (command, taskId) => command + ` ; curl -X PUT ${config.eureka_endpoint}/_internal/tasks/${taskId}/done`
   const persevereRunImagePromisified = ({ docker, image, streams, command, opts, delays }) =>
     persevere(() =>
       new Promise((resolve, reject) =>
@@ -20,6 +21,9 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
           .then(() => controller.pushImage({ docker, taskId, params }))
       })
   return {
+    terminateTask: taskId =>
+      controller.findInstanceForTask(taskId)
+        .then(vmId => terminateInstance(vmId)),
     runTask: (taskId, params) => {
       return database.tasks.changeTaskStatusInitializing(taskId)
         .then(() => database.machines.getMachines({ account: params.account }))
@@ -31,7 +35,10 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
               const docker = new Dockerode({ host: vm.ip, port: config.docker_port })
               return persevere(() => controller.pullImage({ docker, image: imageLocator }), Array(6).fill(moment.duration(5, 'seconds')))
                 .then(() => logger.info('Successfully pulled %s on %s', imageLocator, vm.ip))
-                .then(() => persevereRunImagePromisified({ docker, image: imageLocator, command: params.command, delays: [moment.duration(5, 'seconds')] }))
+                .then(() => {
+                  const wrappedCommand = addCleanupToCommand(params.command, taskId)
+                  return persevereRunImagePromisified({ docker, image: imageLocator, command: wrappedCommand, delays: [moment.duration(5, 'seconds')] })
+                })
                 .then(container => logger.info('Container %s running for task %s', container.id, taskId))
                 .then(() => database.tasks.changeTaskStatusRunning(taskId))
                 .then(() => logger.info('Task %s running', taskId))

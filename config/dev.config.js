@@ -4,6 +4,7 @@ const database = 'eureka_dev'
 const instanceName = 'dotted-vim-164110:us-east1:eureka-dev'
 
 module.exports = {
+  eureka_endpoint: 'https://dotted-vim-164110.appspot.com',
   google: {
     project: 'dotted-vim-164110',
     instance_image: 'docker-enabled-nowrapping',
