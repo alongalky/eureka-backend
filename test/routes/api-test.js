@@ -20,7 +20,9 @@ describe('API', () => {
     },
     tasks: {
       addTask: sinon.stub(),
-      getTasks: sinon.stub()
+      getTasks: sinon.stub(),
+      changeTaskStatusError: sinon.stub(),
+      changeTaskStatusDone: sinon.stub()
     },
     accounts: {
       getAccount: sinon.stub(),
@@ -32,7 +34,8 @@ describe('API', () => {
   }
   const cloud = {
     runTask: sinon.stub(),
-    resolveInstanceExternalIp: sinon.stub()
+    resolveInstanceExternalIp: sinon.stub(),
+    terminateTask: sinon.stub()
   }
 
   let succeedAuthentication = true
@@ -512,6 +515,66 @@ describe('API', () => {
             sinon.assert.notCalled(database.machines.getMachines)
             done(err)
           })
+      })
+    })
+    describe('Internal', () => {
+      const goodTaskId = '47bd7765-2378-45f9-8588-f2d55c4208a7'
+
+      beforeEach(() => {
+        cloud.terminateTask.reset()
+        database.tasks.changeTaskStatusDone.reset()
+        database.tasks.changeTaskStatusError.reset()
+      })
+      describe('PUT /_internal/tasks/:task_id/done', () => {
+        it('returns 201 on happy flow', done => {
+          cloud.terminateTask.resolves()
+
+          database.tasks.changeTaskStatusDone.resolves()
+          supertest(app)
+            .put(`/api/_internal/tasks/${goodTaskId}/done`)
+            .expect(201, done)
+        })
+        it('returns 422 when taskId is not a valid UUID', done => {
+          const badTaskId = '1234-1941511'
+
+          supertest(app)
+            .put(`/api/_internal/tasks/${badTaskId}/done`)
+            .expect(422)
+            .end((err, res) => {
+              sinon.assert.notCalled(cloud.terminateTask)
+
+              done(err)
+            })
+        })
+        it('returns 500 when terminateTask fails', done => {
+          cloud.terminateTask.rejects(new Error('Crazy API error'))
+
+          supertest(app)
+            .put(`/api/_internal/tasks/${goodTaskId}/done`)
+            .expect(500)
+            .end((err, res) => {
+              sinon.assert.notCalled(database.tasks.changeTaskStatusDone)
+              sinon.assert.calledOnce(database.tasks.changeTaskStatusError)
+              sinon.assert.calledWith(database.tasks.changeTaskStatusError, goodTaskId)
+
+              done(err)
+            })
+        })
+        it('returns 500 when changeTaskStatusDone fails', done => {
+          cloud.terminateTask.resolves()
+          database.tasks.changeTaskStatusDone.rejects(new Error('Crazy database error'))
+
+          supertest(app)
+            .put(`/api/_internal/tasks/${goodTaskId}/done`)
+            .expect(500)
+            .end((err, res) => {
+              sinon.assert.calledOnce(database.tasks.changeTaskStatusDone)
+              sinon.assert.calledOnce(database.tasks.changeTaskStatusError)
+              sinon.assert.calledWith(database.tasks.changeTaskStatusError, goodTaskId)
+
+              done(err)
+            })
+        })
       })
     })
   })

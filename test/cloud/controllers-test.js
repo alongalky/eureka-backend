@@ -129,10 +129,10 @@ describe('Cloud controller', () => {
             done()
           })
       })
-      it('runner command is started in the context of a shell (/bin/sh)', done => {
+      it.skip('runner command is started in the context of a shell (/bin/sh)', done => {
         cloud.runTask(taskId, params)
           .then(() => {
-            sinon.assert.alwaysCalledWithMatch(Dockerode.prototype.run, remoteImageName, '/bin/sh -c'.split(' ').concat(params.command))
+            sinon.assert.alwaysCalledWithMatch(Dockerode.prototype.run, remoteImageName, '/bin/sh -c'.split(' '))
             done()
           })
       })
@@ -478,6 +478,32 @@ describe('Cloud controller', () => {
               done()
             })
         })
+      })
+    })
+    describe('terminateInstance', () => {
+      beforeEach(() => {
+        gZone.vm.returns(deleteVm)
+      })
+      it('happy flow', done => {
+        deleteVm.delete.resolves()
+        googleController.terminateInstance('1234')
+          .then(vm => {
+            sinon.assert.calledOnce(gZone.vm)
+            sinon.assert.calledOnce(deleteVm.delete)
+            sinon.assert.calledWith(gZone.vm, '1234')
+            done()
+          })
+      })
+
+      it('throws on vm.delete API error', done => {
+        deleteVm.delete.rejects(new Error('Crazy API error'))
+        googleController.terminateInstance('1234')
+          .catch(vm => {
+            sinon.assert.calledOnce(gZone.vm)
+            sinon.assert.calledOnce(deleteVm.delete)
+            sinon.assert.calledWith(gZone.vm, '1234')
+            done()
+          })
       })
     })
   })

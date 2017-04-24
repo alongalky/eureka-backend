@@ -2,7 +2,7 @@ const moment = require('moment')
 const logger = require('../logger/logger')()
 
 module.exports = ({ config, database, Dockerode, controller, persevere }) => {
-  const addCleanupToCommand = (command, taskId) => command + ` ; curl -X PUT ${config.eureka_endpoint}/_internal/tasks/${taskId}/done`
+  const addCleanupToCommand = (command, taskId) => command + ` ; curl -X PUT ${config.eureka_endpoint}/api/_internal/tasks/${taskId}/done`
   const persevereRunImagePromisified = ({ docker, image, streams, command, opts, delays }) =>
     persevere(() =>
       new Promise((resolve, reject) =>
@@ -23,7 +23,7 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
   return {
     terminateTask: taskId =>
       controller.findInstanceForTask(taskId)
-        .then(vmId => terminateInstance(vmId)),
+        .then(vmId => controller.terminateInstance(vmId)),
     runTask: (taskId, params) => {
       return database.tasks.changeTaskStatusInitializing(taskId)
         .then(() => database.machines.getMachines({ account: params.account }))

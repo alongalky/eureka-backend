@@ -14,13 +14,17 @@ module.exports = ({ database, config, cloud }) => {
         const taskId = req.params.task_id
         return cloud.terminateTask(taskId)
           .then(() => database.tasks.changeTaskStatusDone(taskId))
-            .catch(err => {
-              // TODO: Alert
-              logger.error(err)
-              res.status(500).send('Failed to transition task %s to Done', taskId)
-              return database.tasks.changeTaskStatusError(taskId)
-            })
-          .catch(() => {
+          .then(() => {
+            logger.info('Succesfully terminated task', taskId)
+            res.status(201).send({message: 'Task terminated successfuly'})
+          })
+          .catch(err => {
+            // TODO: Alert
+            logger.error(err)
+            res.status(500).send(`Failed to transition task ${taskId} to Done`)
+            return database.tasks.changeTaskStatusError(taskId)
+          })
+          .catch(err => {
             // TODO: Alert
             logger.error(err)
           })
