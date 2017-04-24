@@ -11,13 +11,23 @@ describe('Cloud controller', () => {
       region: 'us-east1',
       zone: 'us-east1-b',
       project: 'striped-zebra-11',
-      instance_image: 'awesome-machine'
+      instance_image: 'awesome-machine',
+      docker_registry: 'us.docker.registry.io'
     }
   }
+  const params = {
+    account: '9876',
+    machineName: 'otramachina',
+    command: 'wget the.web'
+  }
+  const taskId = '1234'
   describe('Agnostic', () => {
     const googleController = {
       controls: 'google',
-      runInstance: sinon.stub()
+      runInstance: sinon.stub(),
+      resolveInstanceExternalIp: sinon.stub(),
+      pushImage: sinon.stub(),
+      pullImage: sinon.stub()
     }
     const database = {
       tasks: {
@@ -25,20 +35,34 @@ describe('Cloud controller', () => {
         changeTaskStatusRunning: sinon.stub(),
         changeTaskStatusError: sinon.stub(),
         changeTaskStatusDone: sinon.stub()
+      },
+      machines: {
+        getMachines: sinon.stub()
       }
     }
+    const dContainer = {
+      commit: sinon.stub()
+    }
+
     const Dockerode = sinon.stub()
-    Dockerode.prototype.pull = sinon.stub()
     Dockerode.prototype.run = sinon.stub()
+    Dockerode.prototype.getContainer = sinon.stub()
+
     beforeEach(() => {
       googleController.runInstance.reset()
+      googleController.pullImage.reset()
+      googleController.pushImage.reset()
+      googleController.resolveInstanceExternalIp.reset()
       database.tasks.changeTaskStatusInitializing.reset()
       database.tasks.changeTaskStatusRunning.reset()
       database.tasks.changeTaskStatusError.reset()
       database.tasks.changeTaskStatusDone.reset()
-      Dockerode.prototype.pull.reset()
+      database.machines.getMachines.reset()
+      Dockerode.reset()
       Dockerode.prototype.run.reset()
+      dContainer.commit.reset()
     })
+
     const controllers = [googleController]
     const persevere = callback => callback()
     const cloud = require('../../cloud/agnostic')({
@@ -48,98 +72,190 @@ describe('Cloud controller', () => {
       controller: controllers.find(c => c.controls === config.cloud_provider),
       persevere
     })
-    it('on happy flow transitions a task to Initializing and then Running', done => {
-      database.tasks.changeTaskStatusInitializing.resolves()
-      googleController.runInstance.resolves({ ip: '1.2.3.4' })
-      Dockerode.prototype.pull.resolves()
-      Dockerode.prototype.run.resolves()
+    const remoteImageName = [[config.google.docker_registry, config.google.project, params.account].join('/'), taskId].join(':')
 
-      cloud.runTask('1234', {})
-        .then(() => {
-          sinon.assert.calledWithMatch(Dockerode, { host: '1.2.3.4' })
-          sinon.assert.calledOnce(database.tasks.changeTaskStatusInitializing)
-          sinon.assert.calledOnce(database.tasks.changeTaskStatusRunning)
-          sinon.assert.callOrder(database.tasks.changeTaskStatusInitializing, database.tasks.changeTaskStatusRunning)
-          sinon.assert.calledWith(database.tasks.changeTaskStatusInitializing, '1234')
-          sinon.assert.calledWith(database.tasks.changeTaskStatusRunning, '1234')
-          sinon.assert.notCalled(database.tasks.changeTaskStatusError)
-          sinon.assert.notCalled(database.tasks.changeTaskStatusDone)
-          done()
-        })
+    describe('happy flow', () => {
+      beforeEach(() => {
+        database.tasks.changeTaskStatusInitializing.resolves()
+        database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
+        googleController.runInstance.resolves({ ip: '1.2.3.4' })
+        googleController.resolveInstanceExternalIp.resolves('9.8.7.6')
+        googleController.pushImage.resolves(remoteImageName)
+        googleController.pullImage.resolves()
+        Dockerode.prototype.run.returns({ on: (event, callback) => callback('1423') })
+        Dockerode.prototype.getContainer.returns(dContainer)
+        database.tasks.changeTaskStatusRunning.resolves()
+        dContainer.commit.resolves()
+      })
+      it('transitions a task to Initializing and then Running', done => {
+        cloud.runTask(taskId, params)
+          .then(() => {
+            sinon.assert.calledOnce(database.tasks.changeTaskStatusInitializing)
+            sinon.assert.calledOnce(database.tasks.changeTaskStatusRunning)
+            sinon.assert.callOrder(database.tasks.changeTaskStatusInitializing, database.tasks.changeTaskStatusRunning)
+            sinon.assert.calledWith(database.tasks.changeTaskStatusInitializing, '1234')
+            sinon.assert.calledWith(database.tasks.changeTaskStatusRunning, '1234')
+            sinon.assert.notCalled(database.tasks.changeTaskStatusError)
+            sinon.assert.notCalled(database.tasks.changeTaskStatusDone)
+            done()
+          })
+      })
+      it('it initializes Dockerode twice, once for machina and once for runner', done => {
+        cloud.runTask(taskId, params)
+          .then(() => {
+            sinon.assert.calledTwice(Dockerode)
+            sinon.assert.calledWithMatch(Dockerode, { host: '1.2.3.4' })
+            sinon.assert.calledWithMatch(Dockerode, { host: '9.8.7.6' })
+            done()
+          })
+      })
+      it('the right machine and container are obtained, resolved, tagged and pushed', done => {
+        cloud.runTask(taskId, params)
+          .then(() => {
+            sinon.assert.calledWith(database.machines.getMachines, { account: '9876' })
+            sinon.assert.calledWith(Dockerode.prototype.getContainer, 'abcd')
+            sinon.assert.alwaysCalledWith(dContainer.commit, { repo: '9876', tag: '1234' })
+            sinon.assert.calledWithMatch(googleController.pushImage, { taskId: '1234', params })
+            sinon.assert.calledWith(googleController.resolveInstanceExternalIp, 'Vm987')
+            done()
+          })
+      })
+      it('only one runner machine is started, properly tagged and proper image pulled and run', done => {
+        cloud.runTask(taskId, params)
+          .then(() => {
+            sinon.assert.calledOnce(googleController.runInstance)
+            sinon.assert.calledWith(googleController.runInstance, '1234', params)
+            sinon.assert.alwaysCalledWithMatch(googleController.pullImage, { image: remoteImageName })
+            sinon.assert.alwaysCalledWithMatch(Dockerode.prototype.run, remoteImageName, params.command.split(' '))
+            done()
+          })
+      })
     })
-    it('transitions task from Initializing to Error if changeTaskStatusInitializing fails', done => {
-      database.tasks.changeTaskStatusInitializing.rejects(new Error('Crazy database error'))
+    describe('error conditions', () => {
+      beforeEach(() => {
+        Dockerode.prototype.getContainer.returns(dContainer)
+      })
+      it('does not initialize any Docker controller if changeTaskStatusInitializing fails', done => {
+        database.tasks.changeTaskStatusInitializing.rejects(new Error('Crazy database error'))
 
-      cloud.runTask('1234', {})
-        .then(() => {
-          sinon.assert.calledWithMatch(Dockerode, { host: '1.2.3.4' })
-          sinon.assert.calledOnce(database.tasks.changeTaskStatusInitializing)
-          sinon.assert.calledOnce(database.tasks.changeTaskStatusError)
-          sinon.assert.callOrder(database.tasks.changeTaskStatusInitializing, database.tasks.changeTaskStatusError)
-          sinon.assert.calledWith(database.tasks.changeTaskStatusInitializing, '1234')
-          sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
-          sinon.assert.notCalled(database.tasks.changeTaskStatusRunning)
-          sinon.assert.notCalled(database.tasks.changeTaskStatusDone)
-          done()
-        })
-    })
-    it('transitions task from Initializing to Error if runInstance fails', done => {
-      database.tasks.changeTaskStatusInitializing.resolves()
-      googleController.runInstance.rejects(new Error('Crazy API Error'))
+        cloud.runTask('1234', params)
+          .then(() => {
+            sinon.assert.notCalled(Dockerode)
+            sinon.assert.notCalled(googleController.runInstance)
+            sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
+            done()
+          })
+      })
+      it('does not initialize any Docker controller if resolving IP for VM fails', done => {
+        database.tasks.changeTaskStatusInitializing.resolves()
+        googleController.resolveInstanceExternalIp.rejects(new Error('Crazy API Error'))
 
-      cloud.runTask('1234', {})
-        .then(() => {
-          sinon.assert.calledWithMatch(Dockerode, { host: '1.2.3.4' })
-          sinon.assert.calledOnce(database.tasks.changeTaskStatusInitializing)
-          sinon.assert.calledOnce(database.tasks.changeTaskStatusError)
-          sinon.assert.callOrder(database.tasks.changeTaskStatusInitializing, database.tasks.changeTaskStatusError)
-          sinon.assert.calledWith(database.tasks.changeTaskStatusInitializing, '1234')
-          sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
-          sinon.assert.notCalled(database.tasks.changeTaskStatusRunning)
-          sinon.assert.notCalled(database.tasks.changeTaskStatusDone)
-          done()
-        })
-    })
-    it('transitions task to Error if docker all pulls fail', done => {
-      database.tasks.changeTaskStatusInitializing.resolves()
-      googleController.runInstance.resolves({ ip: '1.2.3.4' })
-      Dockerode.prototype.pull.rejects(new Error('Crazy docker error'))
-      Dockerode.prototype.run.rejects(new Error('Crazy docker error'))
+        cloud.runTask('1234', params)
+          .then(() => {
+            sinon.assert.notCalled(Dockerode)
+            sinon.assert.notCalled(googleController.runInstance)
+            sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
+            done()
+          })
+      })
+      it('transitions task to Error if commit fails over the machina\'s Docker controller', done => {
+        database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
+        database.tasks.changeTaskStatusInitializing.resolves()
+        googleController.resolveInstanceExternalIp.resolves('9.8.7.6')
+        dContainer.commit.rejects(new Error('Crazy Docker Error'))
 
-      cloud.runTask('1234', {})
-        .then(() => {
-          sinon.assert.calledWithMatch(Dockerode, { host: '1.2.3.4' })
-          sinon.assert.calledOnce(database.tasks.changeTaskStatusInitializing)
-          sinon.assert.calledOnce(database.tasks.changeTaskStatusError)
-          sinon.assert.callOrder(database.tasks.changeTaskStatusInitializing, database.tasks.changeTaskStatusError)
-          sinon.assert.calledWith(database.tasks.changeTaskStatusInitializing, '1234')
-          sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
-          sinon.assert.notCalled(database.tasks.changeTaskStatusRunning)
-          sinon.assert.notCalled(database.tasks.changeTaskStatusDone)
-          done()
-        })
-    })
-    it('transitions task to Error if all docker runs fail', done => {
-      database.tasks.changeTaskStatusInitializing.resolves()
-      googleController.runInstance.resolves({ ip: '1.2.3.4' })
-      Dockerode.prototype.pull.resolves()
-      Dockerode.prototype.run.rejects(new Error('Crazy docker error'))
+        cloud.runTask('1234', params)
+          .then(() => {
+            sinon.assert.calledOnce(Dockerode)
+            sinon.assert.calledWith(googleController.resolveInstanceExternalIp, 'Vm987')
+            sinon.assert.calledWithMatch(Dockerode, { host: '9.8.7.6' })
+            sinon.assert.notCalled(googleController.pushImage)
+            sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
+            done()
+          })
+      })
+      it('transitions task to Error if push fails over the machina\'s Docker controller', done => {
+        database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
+        database.tasks.changeTaskStatusInitializing.resolves()
+        googleController.resolveInstanceExternalIp.resolves('9.8.7.6')
+        dContainer.commit.resolves()
+        googleController.pushImage.rejects(new Error('Crazy Docker Error'))
 
-      cloud.runTask('1234', {})
-        .then(() => {
-          sinon.assert.calledWithMatch(Dockerode, { host: '1.2.3.4' })
-          sinon.assert.calledOnce(database.tasks.changeTaskStatusInitializing)
-          sinon.assert.calledOnce(database.tasks.changeTaskStatusError)
-          sinon.assert.callOrder(database.tasks.changeTaskStatusInitializing, database.tasks.changeTaskStatusError)
-          sinon.assert.calledWith(database.tasks.changeTaskStatusInitializing, '1234')
-          sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
-          sinon.assert.notCalled(database.tasks.changeTaskStatusRunning)
-          sinon.assert.notCalled(database.tasks.changeTaskStatusDone)
-          done()
-        })
+        cloud.runTask('1234', params)
+          .then(() => {
+            sinon.assert.calledOnce(Dockerode)
+            sinon.assert.calledWith(googleController.resolveInstanceExternalIp, 'Vm987')
+            sinon.assert.calledWithMatch(Dockerode, { host: '9.8.7.6' })
+            sinon.assert.notCalled(googleController.runInstance)
+            sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
+            done()
+          })
+      })
+      it('transitions task to Error if runInstance fails over the machina\'s Docker controller', done => {
+        database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
+        database.tasks.changeTaskStatusInitializing.resolves()
+        googleController.resolveInstanceExternalIp.resolves('9.8.7.6')
+        dContainer.commit.resolves()
+        googleController.pushImage.resolves()
+        googleController.runInstance.rejects(new Error('Crazy API error'))
+
+        cloud.runTask('1234', params)
+          .then(() => {
+            sinon.assert.calledOnce(Dockerode)
+            sinon.assert.calledWith(googleController.resolveInstanceExternalIp, 'Vm987')
+            sinon.assert.calledWithMatch(Dockerode, { host: '9.8.7.6' })
+            sinon.assert.notCalled(googleController.pullImage)
+            sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
+            done()
+          })
+      })
+      it('transitions task to Error if docker pull fails', done => {
+        database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
+        database.tasks.changeTaskStatusInitializing.resolves()
+        googleController.resolveInstanceExternalIp.resolves('9.8.7.6')
+        dContainer.commit.resolves()
+        googleController.pushImage.resolves(remoteImageName)
+        googleController.runInstance.resolves({ ip: '2.2.2.2' })
+        googleController.pullImage.rejects(new Error('Crazy Docker Error'))
+
+        cloud.runTask('1234', params)
+          .then(() => {
+            sinon.assert.calledTwice(Dockerode)
+            sinon.assert.calledWithMatch(Dockerode, { host: '9.8.7.6' })
+            sinon.assert.calledWithMatch(Dockerode, { host: '2.2.2.2' })
+            sinon.assert.calledWith(googleController.resolveInstanceExternalIp, 'Vm987')
+            sinon.assert.calledWithMatch(googleController.pullImage, { image: remoteImageName })
+            sinon.assert.notCalled(Dockerode.prototype.run)
+            sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
+            done()
+          })
+      })
+      it('transitions task to Error if docker run fails', done => {
+        database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
+        database.tasks.changeTaskStatusInitializing.resolves()
+        googleController.resolveInstanceExternalIp.resolves('9.8.7.6')
+        dContainer.commit.resolves()
+        googleController.pushImage.resolves(remoteImageName)
+        googleController.runInstance.resolves({ ip: '2.2.2.2' })
+        googleController.pullImage.resolves()
+        Dockerode.prototype.run = (a, b, c, d, errorCallback) => errorCallback(new Error('Crazy Docker Error'))
+
+        cloud.runTask('1234', params)
+          .then(() => {
+            sinon.assert.calledTwice(Dockerode)
+            sinon.assert.calledWithMatch(Dockerode, { host: '9.8.7.6' })
+            sinon.assert.calledWithMatch(Dockerode, { host: '2.2.2.2' })
+            sinon.assert.calledWith(googleController.resolveInstanceExternalIp, 'Vm987')
+            sinon.assert.calledWithMatch(googleController.pullImage, { image: remoteImageName })
+            sinon.assert.notCalled(database.tasks.changeTaskStatusRunning)
+            sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
+            done()
+            Dockerode.prototype.run = sinon.stub()
+          })
+      })
     })
   })
-  describe('Google Runner', () => {
+  describe('Google', () => {
     const gZone = {
       createVM: sinon.stub(),
       vm: sinon.stub()
@@ -154,10 +270,14 @@ describe('Cloud controller', () => {
     const deleteVm = {
       delete: sinon.stub()
     }
+    const gAuth = {
+      getToken: null
+    }
 
     const googleController = require('../../cloud/google/controller')({
       config,
-      gce
+      gce,
+      gAuth
     })
 
     beforeEach(() => {
@@ -167,56 +287,191 @@ describe('Cloud controller', () => {
       gVm.waitFor.reset()
     })
 
-    it('on happy flow formatted VM metadata is returned', done => {
-      gZone.createVM.resolves([gVm])
-      gVm.waitFor.resolves([{
-        networkInterfaces: [{
-          accessConfigs: [{
-            natIP: '1.2.3.4'
+    describe('runInstance', () => {
+      it('on happy flow formatted VM metadata is returned', done => {
+        gZone.createVM.resolves([gVm])
+        gVm.waitFor.resolves([{
+          networkInterfaces: [{
+            accessConfigs: [{
+              natIP: '1.2.3.4'
+            }]
           }]
-        }]
-      }])
+        }])
 
-      googleController.runInstance('1234', {})
-      .then(vm => {
-        sinon.assert.calledOnce(gZone.createVM)
-        // Checks if instance gets named correctly
-        sinon.assert.calledWith(gZone.createVM, 'compute-1234', sinon.match.any)
-        sinon.assert.calledOnce(gVm.waitFor)
-        sinon.assert.calledWith(gVm.waitFor, 'RUNNING')
-        if (vm.ip !== '1.2.3.4') {
-          sinon.assert.fail('Metadata not returned correctly')
-        }
-        done()
+        googleController.runInstance('1234', {})
+          .then(vm => {
+            sinon.assert.calledOnce(gZone.createVM)
+            // Checks if instance gets named correctly
+            sinon.assert.calledWith(gZone.createVM, 'runner-1234', sinon.match.any)
+            sinon.assert.calledOnce(gVm.waitFor)
+            sinon.assert.calledWith(gVm.waitFor, 'RUNNING')
+            if (vm.ip !== '1.2.3.4') {
+              sinon.assert.fail('Metadata not returned correctly')
+            }
+            done()
+          })
+      })
+
+      it('throws and deletes instance on createVM API error', done => {
+        gZone.createVM.rejects(new Error('Crazy API Error'))
+        gZone.vm.returns(deleteVm)
+        deleteVm.delete.resolves()
+
+        googleController.runInstance('1234', {})
+        // Notice the catch
+          .catch(() => {
+            sinon.assert.calledOnce(gZone.vm)
+            sinon.assert.calledWith(gZone.vm, 'runner-1234')
+            sinon.assert.calledOnce(deleteVm.delete)
+            done()
+          })
+      })
+
+      it('throws and deletes instance when fails to wait for RUNNING state', (done) => {
+        gZone.createVM.resolves([gVm])
+        gZone.vm.returns(deleteVm)
+        deleteVm.delete.resolves()
+        gVm.waitFor.rejects(new Error('waitFor API Error'))
+
+        googleController.runInstance('1234', {})
+          .catch(() => {
+            sinon.assert.calledOnce(gZone.vm)
+            sinon.assert.calledWith(gZone.vm, 'runner-1234')
+            sinon.assert.calledOnce(deleteVm.delete)
+            done()
+          })
       })
     })
+    describe('Docker registry interactions', () => {
+      const dImage = {
+        push: null,
+        tag: sinon.stub()
+      }
+      const dModem = {
+        followProgress: null
+      }
+      const docker = {
+        getImage: sinon.stub(),
+        modem: dModem,
+        pull: null
+      }
+      const repo = `${config.google.docker_registry}/${config.google.project}/${params.account}`
+      const tag = taskId
+      const fakestream = {}
+      describe('pushImage', () => {
+        it('on happy flow returns properly formatted image locator', done => {
+          gAuth.getToken = callback => callback(null, 'token')
+          docker.getImage.returns(dImage)
+          dImage.tag.resolves()
+          dImage.push = ({authconfig}, callback) => {
+            if (authconfig.password !== 'token') {
+              sinon.assert.fail('token passed incorrectly')
+              done()
+            } else {
+              callback(null, fakestream)
+            }
+          }
+          dModem.followProgress = (stream, onFinishedCallback) =>
+            onFinishedCallback(null)
 
-    it('deletes instance on API error', done => {
-      gZone.createVM.rejects(new Error('Crazy API Error'))
-      gZone.vm.returns(deleteVm)
-      deleteVm.delete.resolves()
-
-      googleController.runInstance('1234', {})
-      .then(() => {
-        sinon.assert.calledOnce(gZone.vm)
-        sinon.assert.calledWith(gZone.vm, 'compute-1234')
-        sinon.assert.calledOnce(deleteVm.delete)
-        done()
+          googleController.pushImage({ docker, taskId, params })
+            .then(imageLocator => {
+              if (imageLocator !== `${repo}:${tag}`) {
+                sinon.assert.fail('returned image locator has not proper format')
+              }
+              // Get local image, and not the remote with full repo
+              sinon.assert.calledWith(docker.getImage, `${params.account}:${taskId}`)
+              sinon.assert.calledWith(dImage.tag, {repo, tag})
+              done()
+            })
+        })
+        it('throws when tagging fails', done => {
+          dImage.tag.rejects()
+          googleController.pushImage({ docker, taskId, params })
+            .catch(() => {
+              done()
+            })
+        })
+        it('throws when gAuth getToken fails', done => {
+          dImage.tag.resolves()
+          gAuth.getToken = callback => callback('getToken ERROR', null)
+          googleController.pushImage({ docker, taskId, params })
+            .catch(() => {
+              done()
+            })
+        })
+        it('throws when pushing fails', done => {
+          gAuth.getToken = callback => callback(null, 'token')
+          docker.getImage.returns(dImage)
+          dImage.tag.resolves()
+          dImage.push = ({authconfig}, callback) => {
+            if (authconfig.password !== 'token') {
+              sinon.assert.fail('token passed incorrectly')
+              done()
+            } else {
+              callback('push ERROR', null)
+            }
+          }
+          googleController.pushImage({ docker, taskId, params })
+            .catch(() => {
+              done()
+            })
+        })
       })
-    })
+      describe('pullImage', () => {
+        it('on happy flow returns properly formatted image locator', done => {
+          gAuth.getToken = callback => callback(null, 'token')
+          docker.pull = (image, {authconfig}, callback) => {
+            if (authconfig.password !== 'token') {
+              sinon.assert.fail('token passed incorrectly')
+              done()
+            } else if (image !== 'Image/Locator:39484') {
+              sinon.assert.fail('image locator has been altered')
+              done()
+            } else {
+              callback(null, fakestream)
+            }
+          }
+          dModem.followProgress = (stream, onFinishedCallback) =>
+            onFinishedCallback(null)
 
-    it('deletes instance when fails to wait for RUNNING state', (done) => {
-      gZone.createVM.resolves([gVm])
-      gZone.vm.returns(deleteVm)
-      deleteVm.delete.resolves()
-      gVm.waitFor.rejects(new Error('waitFor API Error'))
+          googleController.pullImage({ docker, image: 'Image/Locator:39484' })
+            .then(imageLocator => {
+              if (imageLocator !== 'Image/Locator:39484') {
+                sinon.assert.fail('returned image locator has not proper format')
+              }
+              done()
+            })
+        })
+        it('throws when gAuth getToken fails', done => {
+          dImage.tag.resolves()
+          gAuth.getToken = callback => callback('getToken ERROR', null)
+          googleController.pushImage({ docker, taskId, params })
+            .catch(() => {
+              done()
+            })
+        })
+        it('throws when pull fails', done => {
+          gAuth.getToken = callback => callback(null, 'token')
+          docker.pull = (image, {authconfig}, callback) => {
+            if (authconfig.password !== 'token') {
+              sinon.assert.fail('token passed incorrectly')
+              done()
+            } else if (image !== 'Image/Locator:39484') {
+              sinon.assert.fail('image locator has been altered')
+              done()
+            } else {
+              callback('pull ERROR', null)
+            }
+          }
+          dModem.followProgress = (stream, onFinishedCallback) =>
+            onFinishedCallback(null)
 
-      googleController.runInstance('1234', {})
-      .then(() => {
-        sinon.assert.calledOnce(gZone.vm)
-        sinon.assert.calledWith(gZone.vm, 'compute-1234')
-        sinon.assert.calledOnce(deleteVm.delete)
-        done()
+          googleController.pullImage({ docker, image: 'Image/Locator:39484' })
+            .catch(() => {
+              done()
+            })
+        })
       })
     })
   })
