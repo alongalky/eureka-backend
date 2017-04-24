@@ -100,7 +100,7 @@ describe('Cloud controller', () => {
             done()
           })
       })
-      it('Dockerode is initialized twice, once for machina and once for runner', done => {
+      it('it initializes Dockerode twice, once for machina and once for runner', done => {
         cloud.runTask(taskId, params)
           .then(() => {
             sinon.assert.calledTwice(Dockerode)
@@ -440,9 +440,6 @@ describe('Cloud controller', () => {
               if (imageLocator !== 'Image/Locator:39484') {
                 sinon.assert.fail('returned image locator has not proper format')
               }
-              // Get local image, and not the remote with full repo
-              sinon.assert.calledWith(docker.getImage, `${params.account}:${taskId}`)
-              sinon.assert.calledWith(dImage.tag, {repo, tag})
               done()
             })
         })

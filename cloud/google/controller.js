@@ -37,13 +37,14 @@ module.exports = ({ config, gce, gAuth }) => {
           initializeParams: {
             sourceImage: `projects/${config.google.project}/global/images/${config.google.instance_image}`,
             diskType: `projects/${config.google.project}/zones/${config.google.zone}/diskTypes/pd-standard`,
+            // TODO: change to actual disk size for the tier
             diskSizeGb: '10'
           }
         } ],
         tags: [
           'type-runner',
           ['account', params.account].join('-'),
-          ['task', params.taskName].join('-')
+          ['task', taskId].join('-')
         ],
         networkInterfaces: [ {
           network: `projects/${config.google.project}/global/networks/default`,
