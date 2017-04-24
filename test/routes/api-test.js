@@ -31,7 +31,8 @@ describe('API', () => {
     }
   }
   const cloud = {
-    runTask: sinon.stub()
+    runTask: sinon.stub(),
+    resolveInstanceExternalIp: sinon.stub()
   }
 
   let succeedAuthentication = true
@@ -81,6 +82,7 @@ describe('API', () => {
     database.accounts.getAccount.reset()
     database.accounts.getAccountSecretKey.reset()
     cloud.runTask.reset()
+    cloud.resolveInstanceExternalIp.reset()
     succeedAuthentication = true
   })
 
@@ -449,7 +451,14 @@ describe('API', () => {
 
     describe('GET /machines', () => {
       it('GET /machines returns 200 on happy flow', done => {
-        database.machines.getMachines.returns(Promise.resolve(['happy', 'flow', 'forever']))
+        const machine = {
+          machine_id: 'machina',
+          name: 'betsy',
+          ssh_port: '666',
+          vm_id: 'vm13'
+        }
+        database.machines.getMachines.returns(Promise.resolve([machine, machine, machine]))
+        cloud.resolveInstanceExternalIp.resolves('2.3.4.5')
 
         supertest(app)
           .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/machines')
@@ -458,6 +467,12 @@ describe('API', () => {
             expect(res.body).to.not.be.empty
             expect(res.body).to.have.lengthOf(3)
             sinon.assert.calledWithMatch(database.machines.getMachines, { account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91' })
+            expect(res.body[0]).to.deep.equal({
+              machine_id: 'machina',
+              name: 'betsy',
+              ssh_port: '666',
+              ssh_ip: '2.3.4.5'
+            })
 
             done(err)
           })
@@ -474,6 +489,14 @@ describe('API', () => {
       })
       it('returns 500 when database call fails', done => {
         database.machines.getMachines.rejects(new Error('Crazy database error'))
+
+        supertest(app)
+          .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/machines')
+          .expect(500, done)
+      })
+      it('returns 500 when cloud API call fails', done => {
+        database.machines.getMachines.resolves({ vm_id: 'vm13' })
+        cloud.resolveInstanceExternalIp.rejects(new Error('Crazy cloud API error'))
 
         supertest(app)
           .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/machines')
