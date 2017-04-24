@@ -120,13 +120,19 @@ describe('Cloud controller', () => {
             done()
           })
       })
-      it('only one runner machine is started, properly tagged and proper image pulled and run', done => {
+      it('only one runner machine is started, properly tagged and proper image pulled', done => {
         cloud.runTask(taskId, params)
           .then(() => {
             sinon.assert.calledOnce(googleController.runInstance)
             sinon.assert.calledWith(googleController.runInstance, '1234', params)
             sinon.assert.alwaysCalledWithMatch(googleController.pullImage, { image: remoteImageName })
-            sinon.assert.alwaysCalledWithMatch(Dockerode.prototype.run, remoteImageName, params.command.split(' '))
+            done()
+          })
+      })
+      it('runner command is started in the context of a shell (/bin/sh)', done => {
+        cloud.runTask(taskId, params)
+          .then(() => {
+            sinon.assert.alwaysCalledWithMatch(Dockerode.prototype.run, remoteImageName, '/bin/sh -c'.split(' ').concat(params.command))
             done()
           })
       })
