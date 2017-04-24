@@ -7,12 +7,15 @@ module.exports = ({ database, cloud, config, authStrategy }) => {
   const machinesApi = require('./api/machines')({ database, cloud })
   const tasksApi = require('./api/tasks')({ database, cloud })
   const authenticateApi = require('./api/authenticate')({ database, config })
+  const internalApi = require('./api/internal')({ database, config, cloud })
 
   apiRouter.get('/health-check', (req, res) => {
     res.json({ message: 'All is well' })
   })
 
   apiRouter.post('/authenticate', authenticateApi.authenticate)
+
+  apiRouter.put('/_internal/tasks/:task_id', internalApi.putTask)
 
   passport.use(authStrategy)
   apiRouter.use('/accounts/:account_id', passport.authenticate('jwt', {session: false}), accountsRouter)

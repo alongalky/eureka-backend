@@ -1,14 +1,4 @@
 const logger = require('../../logger/logger')()
-// TODO: To be removed
-function killInstance (vm) {
-  vm.delete()
-  .then(() => {
-    logger.info('Terminated instance %s', vm.name)
-  })
-  .catch(err => {
-    logger.error('Error terminating instance %s', vm.name, err)
-  })
-}
 
 module.exports = ({ config, gce, gAuth }) => {
   const gZone = gce.zone(config.google.zone)
@@ -26,6 +16,7 @@ module.exports = ({ config, gce, gAuth }) => {
     controls: 'google',
     resolveInstanceInternalIp: instanceId => gZone.vm(instanceId).get().then(([vm]) => vm.metadata.networkInterfaces[0].networkIP),
     resolveInstanceExternalIp: instanceId => gZone.vm(instanceId).get().then(([vm]) => vm.metadata.networkInterfaces[0].accessConfigs[0].natIP),
+    findInstanceForTask: taskId => Promise.resolve('runner-' + taskId),
     runInstance: (taskId, params) => {
       const instanceConfig = {
         // TODO: change to actual instance type specified in params
@@ -78,8 +69,6 @@ module.exports = ({ config, gce, gAuth }) => {
       return gZone.createVM(vmName, instanceConfig)
         .then(([vm, operation, apiResponse]) => {
           logger.info('VM %s starting', vmName)
-          // To be removed: Kill instance after 3 minutes
-          setTimeout(() => killInstance(vm), 60000 * 3)
           return vm.waitFor('RUNNING')
         })
         .then(([vmMetadata]) => {
@@ -97,6 +86,17 @@ module.exports = ({ config, gce, gAuth }) => {
             })
             .then(() => Promise.reject(err))
         })
+    },
+    terminateInstance: vmId => {
+      const vm = gZone.vm(vmId)
+      return vm.delete()
+      .then(() => {
+        logger.info('Terminated instance %s', vm.name)
+      })
+      .catch(err => {
+        logger.error('Error terminating instance %s', vm.name, err)
+        return Promise.reject(err)
+      })
     },
     pushImage: ({ docker, taskId, params }) => {
       // imageName format is REPO:TAG, in API calls these need to be passed as { repo: , tag: }
