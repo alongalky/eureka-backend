@@ -45,6 +45,7 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
           // TODO: Alert
           logger.error('Task %s deployment failed but status could not be updated', taskId, err)
         })
-    }
+    },
+    resolveInstanceExternalIp: vmId => controller.resolveInstanceExternalIp(vmId)
   }
 }

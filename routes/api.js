@@ -4,7 +4,7 @@ const accountsRouter = express.Router({mergeParams: true})
 const passport = require('passport')
 
 module.exports = ({ database, cloud, config, authStrategy }) => {
-  const machinesApi = require('./api/machines')({ database })
+  const machinesApi = require('./api/machines')({ database, cloud })
   const tasksApi = require('./api/tasks')({ database, cloud })
   const authenticateApi = require('./api/authenticate')({ database, config })
 
