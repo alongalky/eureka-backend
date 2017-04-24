@@ -2,7 +2,7 @@ const moment = require('moment')
 const logger = require('../logger/logger')()
 
 module.exports = ({ config, database, Dockerode, controller, persevere }) => {
-  const addCleanupToCommand = (command, taskId) => command + ` ; curl -X PUT ${config.eureka_endpoint}/api/_internal/tasks/${taskId}/done`
+  const wrapCommand = (command, taskId) => command + ` ; curl -X PUT -H 'Content-Type: application/json' -d '{"status":"done"}' ${config.eureka_endpoint}/api/_internal/tasks/${taskId}`
   const persevereRunImagePromisified = ({ docker, image, streams, command, opts, delays }) =>
     persevere(() =>
       new Promise((resolve, reject) =>
@@ -36,7 +36,7 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
               return persevere(() => controller.pullImage({ docker, image: imageLocator }), Array(6).fill(moment.duration(5, 'seconds')))
                 .then(() => logger.info('Successfully pulled %s on %s', imageLocator, vm.ip))
                 .then(() => {
-                  const wrappedCommand = addCleanupToCommand(params.command, taskId)
+                  const wrappedCommand = wrapCommand(params.command, taskId)
                   return persevereRunImagePromisified({ docker, image: imageLocator, command: wrappedCommand, delays: [moment.duration(5, 'seconds')] })
                 })
                 .then(container => logger.info('Container %s running for task %s', container.id, taskId))

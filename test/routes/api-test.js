@@ -519,6 +519,7 @@ describe('API', () => {
     })
     describe('Internal', () => {
       const goodTaskId = '47bd7765-2378-45f9-8588-f2d55c4208a7'
+      const goodParam = { status: 'done' }
 
       beforeEach(() => {
         cloud.terminateTask.reset()
@@ -531,14 +532,27 @@ describe('API', () => {
 
           database.tasks.changeTaskStatusDone.resolves()
           supertest(app)
-            .put(`/api/_internal/tasks/${goodTaskId}/done`)
+            .put(`/api/_internal/tasks/${goodTaskId}`)
+            .send(goodParam)
             .expect(201, done)
         })
         it('returns 422 when taskId is not a valid UUID', done => {
           const badTaskId = '1234-1941511'
 
           supertest(app)
-            .put(`/api/_internal/tasks/${badTaskId}/done`)
+            .put(`/api/_internal/tasks/${badTaskId}`)
+            .expect(422)
+            .send(goodParam)
+            .end((err, res) => {
+              sinon.assert.notCalled(cloud.terminateTask)
+
+              done(err)
+            })
+        })
+        it('returns 422 when status is not done', done => {
+          supertest(app)
+            .put(`/api/_internal/tasks/${goodTaskId}`)
+            .send({ status: 'initializing' })
             .expect(422)
             .end((err, res) => {
               sinon.assert.notCalled(cloud.terminateTask)
@@ -550,7 +564,8 @@ describe('API', () => {
           cloud.terminateTask.rejects(new Error('Crazy API error'))
 
           supertest(app)
-            .put(`/api/_internal/tasks/${goodTaskId}/done`)
+            .put(`/api/_internal/tasks/${goodTaskId}`)
+            .send(goodParam)
             .expect(500)
             .end((err, res) => {
               sinon.assert.notCalled(database.tasks.changeTaskStatusDone)
@@ -565,7 +580,8 @@ describe('API', () => {
           database.tasks.changeTaskStatusDone.rejects(new Error('Crazy database error'))
 
           supertest(app)
-            .put(`/api/_internal/tasks/${goodTaskId}/done`)
+            .put(`/api/_internal/tasks/${goodTaskId}`)
+            .send(goodParam)
             .expect(500)
             .end((err, res) => {
               sinon.assert.calledOnce(database.tasks.changeTaskStatusDone)

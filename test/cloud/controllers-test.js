@@ -129,13 +129,6 @@ describe('Cloud controller', () => {
             done()
           })
       })
-      it.skip('runner command is started in the context of a shell (/bin/sh)', done => {
-        cloud.runTask(taskId, params)
-          .then(() => {
-            sinon.assert.alwaysCalledWithMatch(Dockerode.prototype.run, remoteImageName, '/bin/sh -c'.split(' '))
-            done()
-          })
-      })
     })
     describe('error conditions', () => {
       beforeEach(() => {
