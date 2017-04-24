@@ -15,5 +15,5 @@ VALUES
 ('7921633e-1cb5-49a0-a4b3-4ea9c2765f2e',179.690,'n1-standard-32-ssd',120,32,0,375,0);
 
 INSERT INTO `machines` (`machine_id`, `name`, `account_id`, `vm_id`, `container_id`, `ssh_port`) VALUES
- ('e3fbb152-909d-489b-a385-2e96d12d77fe', 'machina1', '93506318-da47-499e-a6f4-c43bdc1f1eae', 'machinas', 'e23f4c219624', '2001'),
- ('0f89a48f-6fd7-408d-9a8f-f357a38ed880', 'machina2', 'f197ac60-596e-4365-bd55-7b11d07a4482', 'machinas', '1cada835d743', '2000');
+ ('e3fbb152-909d-489b-a385-2e96d12d77fe', 'machina1', '93506318-da47-499e-a6f4-c43bdc1f1eae', 'machinas', '0baf5896186f', '2004'),
+ ('0f89a48f-6fd7-408d-9a8f-f357a38ed880', 'machina2', 'f197ac60-596e-4365-bd55-7b11d07a4482', 'machinas', '7aa6c7757f3a', '2003');
