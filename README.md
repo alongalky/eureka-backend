@@ -15,7 +15,14 @@ an explenation on how to create the base VM to host Eureka's tasks.
 Set up the Google Cloud CLI as explained [here](https://cloud.google.com/sdk/docs/).
 
 ### Deploying
-Once you have everything set up, run `gcloud app deploy` to deploy.
+Once you have everything set up, run one of the following to deploy:
+
+```
+gcloud app deploy dev.yaml --project dotted-vim-164110 --stop-previous-version
+```
+```
+gcloud app deploy beta.yaml --project eureka-beta --stop-previous-version
+```
 
 ## Linting
 In order to lint all project files, run:
