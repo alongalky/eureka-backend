@@ -11,6 +11,6 @@ module.exports = {
     iKey: '32b8b06f-ff4a-4b04-b26d-4d9c4796b92a'
   },
   authentication: {
-    secret: 'VBnLra48VhQ95nWK'
+    secret: 'D3ZPg8EUBxxuLdrB'
   }
 }
