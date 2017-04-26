@@ -7,7 +7,7 @@ module.exports = {
   eureka_endpoint: 'https://dotted-vim-164110.appspot.com',
   google: {
     project: 'dotted-vim-164110',
-    instance_image: 'docker-gcfuse-enabled',
+    instance_image: 'docker-gcfuse-keep',
     docker_registry: 'us.gcr.io'
   },
   database: {
