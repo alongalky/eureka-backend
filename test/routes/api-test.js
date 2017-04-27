@@ -26,7 +26,8 @@ describe('API', () => {
     },
     accounts: {
       getAccount: sinon.stub(),
-      getAccountSecretKey: sinon.stub()
+      getAccountSecretKey: sinon.stub(),
+      getAccounts: sinon.stub()
     },
     tiers: {
       getTiers: sinon.stub()
@@ -35,7 +36,9 @@ describe('API', () => {
   const cloud = {
     runTask: sinon.stub(),
     resolveInstanceExternalIp: sinon.stub(),
-    terminateTask: sinon.stub()
+    terminateTask: sinon.stub(),
+    getInstanceTags: sinon.stub(),
+    getBucketForAccount: sinon.stub()
   }
 
   let succeedAuthentication = true
@@ -84,8 +87,11 @@ describe('API', () => {
     database.tasks.addTask.reset()
     database.accounts.getAccount.reset()
     database.accounts.getAccountSecretKey.reset()
+    database.accounts.getAccounts.reset()
     cloud.runTask.reset()
     cloud.resolveInstanceExternalIp.reset()
+    cloud.getInstanceTags.reset()
+    cloud.getBucketForAccount.reset()
     succeedAuthentication = true
   })
 
@@ -592,6 +598,121 @@ describe('API', () => {
             })
         })
       })
+      describe('GET /_internal/scripts', () => {
+        it('returns 200 on happy flow for type-machinas', done => {
+          cloud.getInstanceTags.resolves(['type-machinas'])
+          cloud.getBucketForAccount.resolves('eureka-account-1234')
+          database.accounts.getAccounts.resolves([{account_id: '1234'}])
+          database.machines.getMachines.resolves([[{ container_id: 'abcd' }], [{ container_id: 'ef01' }]])
+          supertest(app)
+            .get(`/api/_internal/scripts?machine_id=machinas`)
+            .expect(200)
+            .end((err, res) => {
+              sinon.assert.calledOnce(database.accounts.getAccounts)
+
+              done(err)
+            })
+        })
+        it('returns 200 on happy flow for type-runner', done => {
+          cloud.getInstanceTags.resolves(['type-runner', 'account-1234', 'taskname-9191'])
+          cloud.getBucketForAccount.resolves('eureka-account-1234')
+          database.machines.getMachines.rejects(new Error('Crazy API error'))
+          supertest(app)
+            .get(`/api/_internal/scripts?machine_id=machinas`)
+            .expect(200)
+            .end((err, res) => {
+              sinon.assert.notCalled(database.accounts.getAccounts)
+
+              done(err)
+            })
+        })
+        it('returns 422 when machine_id is empty', done => {
+          supertest(app)
+            .get(`/api/_internal/scripts?machine_id=`)
+            .expect(422)
+            .end((err, res) => {
+              sinon.assert.notCalled(cloud.getInstanceTags)
+
+              done(err)
+            })
+        })
+        it('returns 422 when machine_id is not passed', done => {
+          supertest(app)
+            .get(`/api/_internal/scripts`)
+            .expect(422)
+            .end((err, res) => {
+              sinon.assert.notCalled(cloud.getInstanceTags)
+
+              done(err)
+            })
+        })
+        it('returns 500 when getInstanceTags fails', done => {
+          cloud.getInstanceTags.rejects(new Error('Crazy API error'))
+          supertest(app)
+            .get(`/api/_internal/scripts?machine_id=machinas`)
+            .expect(500)
+            .end((err, res) => {
+              sinon.assert.calledOnce(cloud.getInstanceTags)
+
+              done(err)
+            })
+        })
+        it('returns 500 when getAccounts fails for type-machinas', done => {
+          cloud.getInstanceTags.resolves(['type-machinas', 'account-1234', 'taskname-9191'])
+          database.accounts.getAccounts.rejects(new Error('Crazy Database Error'))
+          supertest(app)
+            .get(`/api/_internal/scripts?machine_id=machinas`)
+            .expect(500)
+            .end((err, res) => {
+              sinon.assert.calledOnce(database.accounts.getAccounts)
+              sinon.assert.notCalled(database.machines.getMachines)
+              sinon.assert.notCalled(cloud.getBucketForAccount)
+
+              done(err)
+            })
+        })
+        it('returns 500 when getBucketForAccount fails', done => {
+          cloud.getBucketForAccount.rejects(new Error('Crazy API Error'))
+          supertest(app)
+            .get(`/api/_internal/scripts?machine_id=machinas`)
+            .expect(500)
+            .end((err, res) => {
+              sinon.assert.notCalled(database.machines.getMachines)
+
+              done(err)
+            })
+        })
+        it('returns 500 when getMachines fails for type-machinas', done => {
+          cloud.getInstanceTags.resolves(['type-machinas'])
+          cloud.getBucketForAccount.resolves('eureka-account-1234')
+          database.machines.getMachines.rejects(new Error('Crazy API error'))
+          supertest(app)
+            .get(`/api/_internal/scripts?machine_id=machinas`)
+            .expect(500, done)
+        })
+        it('returns 500 when no taskname tag for type-runner', done => {
+          cloud.getInstanceTags.resolves(['type-runner', 'account-1234'])
+          supertest(app)
+            .get(`/api/_internal/scripts?machine_id=machinas`)
+            .expect(500)
+            .end((err, res) => {
+              sinon.assert.calledOnce(cloud.getInstanceTags)
+
+              done(err)
+            })
+        })
+        it('returns 500 when no account tag for type-runner', done => {
+          cloud.getInstanceTags.resolves(['type-runner', 'taskname-1234'])
+          supertest(app)
+            .get(`/api/_internal/scripts?machine_id=machinas`)
+            .expect(500)
+            .end((err, res) => {
+              sinon.assert.calledOnce(cloud.getInstanceTags)
+
+              done(err)
+            })
+        })
+      })
     })
   })
   describe('Authentication', () => {
@@ -709,39 +830,39 @@ describe('API', () => {
             key: 'badkey'
           })
           supertest(app)
-          .post('/api/authenticate')
-          .send(badParams)
-          .expect(401)
-          .end((err, res) => {
-            expect(res.body).to.not.property('token')
-            done(err)
-          })
+            .post('/api/authenticate')
+            .send(badParams)
+            .expect(401)
+            .end((err, res) => {
+              expect(res.body).to.not.property('token')
+              done(err)
+            })
         })
         it('does not return token if secret is incorrect', done => {
           const badParams = Object.assign({}, goodParams, {
             secret: 'badsecret'
           })
           supertest(app)
-          .post('/api/authenticate')
-          .send(badParams)
-          .expect(401)
-          .end((err, res) => {
-            expect(res.body).to.not.property('token')
-            done(err)
-          })
+            .post('/api/authenticate')
+            .send(badParams)
+            .expect(401)
+            .end((err, res) => {
+              expect(res.body).to.not.property('token')
+              done(err)
+            })
         })
         it('does not return token if account_id is incorrect', done => {
           const badParams = Object.assign({}, goodParams, {
             account_id: '9e43c1df-04c9-4d40-844f-65dfda675e06'
           })
           supertest(app)
-          .post('/api/authenticate')
-          .send(badParams)
-          .expect(401)
-          .end((err, res) => {
-            expect(res.body).to.not.property('token')
-            done(err)
-          })
+            .post('/api/authenticate')
+            .send(badParams)
+            .expect(401)
+            .end((err, res) => {
+              expect(res.body).to.not.property('token')
+              done(err)
+            })
         })
       })
     })

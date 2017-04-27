@@ -17,6 +17,8 @@ module.exports = ({ config, gce, gAuth }) => {
     resolveInstanceInternalIp: instanceId => gZone.vm(instanceId).get().then(([vm]) => vm.metadata.networkInterfaces[0].networkIP),
     resolveInstanceExternalIp: instanceId => gZone.vm(instanceId).get().then(([vm]) => vm.metadata.networkInterfaces[0].accessConfigs[0].natIP),
     findInstanceForTask: taskId => Promise.resolve('runner-' + taskId),
+    getInstanceTags: instanceId => gZone.vm(instanceId).getTags().then(([tags]) => tags),
+    getBucketForAccount: account => Promise.resolve('eureka-account-' + account),
     runInstance: (taskId, params) => {
       const instanceConfig = {
         // TODO: change to actual instance type specified in params
@@ -35,8 +37,16 @@ module.exports = ({ config, gce, gAuth }) => {
         tags: [
           'type-runner',
           ['account', params.account].join('-'),
-          ['task', taskId].join('-')
+          ['task', taskId].join('-'),
+          ['taskname', params.taskName].join('-')
         ],
+        metadata: {
+          items: [
+            {
+              eureka_endpoint: config.eureka_endpoint
+            }
+          ]
+        },
         networkInterfaces: [ {
           network: `projects/${config.google.project}/global/networks/default`,
           subnetwork: `projects/${config.google.project}/regions/${config.google.region}/subnetworks/default`,
@@ -54,6 +64,7 @@ module.exports = ({ config, gce, gAuth }) => {
         serviceAccounts: [ {
           email: '760853174060-compute@developer.gserviceaccount.com',
           scopes: [
+            'https://www.googleapis.com/auth/compute.readonly',
             'https://www.googleapis.com/auth/servicecontrol',
             'https://www.googleapis.com/auth/service.management.readonly',
             'https://www.googleapis.com/auth/logging.write',

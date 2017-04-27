@@ -310,7 +310,38 @@ describe('Cloud controller', () => {
             done()
           })
       })
+      it('on happy flow instance is tagged correctly', done => {
+        const params =
+          {
+            account: '9898',
+            taskName: 'awesomecalculus'
+          }
+        gZone.createVM.resolves([gVm])
+        gVm.waitFor.resolves([{
+          networkInterfaces: [{
+            accessConfigs: [{
+              natIP: '1.2.3.4'
+            }]
+          }]
+        }])
 
+        googleController.runInstance('1234', params)
+          .then(vm => {
+            sinon.assert.calledOnce(gZone.createVM)
+            // Checks if instance gets tagged correctly
+            sinon.assert.calledWithMatch(gZone.createVM, 'runner-1234',
+              {
+                tags: [
+                  'type-runner',
+                  ['account', params.account].join('-'),
+                  ['task', '1234'].join('-'),
+                  ['taskname', params.taskName].join('-')
+                ]
+              }
+            )
+            done()
+          })
+      })
       it('throws and deletes instance on createVM API error', done => {
         gZone.createVM.rejects(new Error('Crazy API Error'))
         gZone.vm.returns(deleteVm)

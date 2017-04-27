@@ -18,5 +18,15 @@ module.exports = {
 
     return connection().query(query, [account])
       .then(([rows, fields]) => rows.length > 0 ? rows[0] : null)
+  },
+  getAccounts: ({machineId}) => {
+    const query =
+      'SELECT accounts.* ' +
+      'FROM machines ' +
+      'INNER JOIN accounts ON machines.account_id = accounts.account_id ' +
+      'WHERE machines.machine_id = ?'
+
+    return connection().query(query, [machineId])
+      .then(([rows, fields]) => rows)
   }
 }
