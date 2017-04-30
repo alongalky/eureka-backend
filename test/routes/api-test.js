@@ -605,7 +605,7 @@ describe('API', () => {
           database.accounts.getAccounts.resolves([{account_id: '1234'}])
           database.machines.getMachines.resolves([[{ container_id: 'abcd' }], [{ container_id: 'ef01' }]])
           supertest(app)
-            .get(`/api/_internal/scripts?machine_id=machinas`)
+            .get(`/api/_internal/scripts?vm_id=machinas`)
             .expect(200)
             .end((err, res) => {
               sinon.assert.calledOnce(database.accounts.getAccounts)
@@ -618,7 +618,7 @@ describe('API', () => {
           cloud.getBucketForAccount.resolves('eureka-account-1234')
           database.machines.getMachines.rejects(new Error('Crazy API error'))
           supertest(app)
-            .get(`/api/_internal/scripts?machine_id=machinas`)
+            .get(`/api/_internal/scripts?vm_id=machinas`)
             .expect(200)
             .end((err, res) => {
               sinon.assert.notCalled(database.accounts.getAccounts)
@@ -626,9 +626,9 @@ describe('API', () => {
               done(err)
             })
         })
-        it('returns 422 when machine_id is empty', done => {
+        it('returns 422 when vm_id is empty', done => {
           supertest(app)
-            .get(`/api/_internal/scripts?machine_id=`)
+            .get(`/api/_internal/scripts?vm_id=`)
             .expect(422)
             .end((err, res) => {
               sinon.assert.notCalled(cloud.getInstanceTags)
@@ -636,7 +636,7 @@ describe('API', () => {
               done(err)
             })
         })
-        it('returns 422 when machine_id is not passed', done => {
+        it('returns 422 when vm_id is not passed', done => {
           supertest(app)
             .get(`/api/_internal/scripts`)
             .expect(422)
@@ -649,7 +649,7 @@ describe('API', () => {
         it('returns 500 when getInstanceTags fails', done => {
           cloud.getInstanceTags.rejects(new Error('Crazy API error'))
           supertest(app)
-            .get(`/api/_internal/scripts?machine_id=machinas`)
+            .get(`/api/_internal/scripts?vm_id=machinas`)
             .expect(500)
             .end((err, res) => {
               sinon.assert.calledOnce(cloud.getInstanceTags)
@@ -661,7 +661,7 @@ describe('API', () => {
           cloud.getInstanceTags.resolves(['type-machinas', 'account-1234', 'taskname-9191'])
           database.accounts.getAccounts.rejects(new Error('Crazy Database Error'))
           supertest(app)
-            .get(`/api/_internal/scripts?machine_id=machinas`)
+            .get(`/api/_internal/scripts?vm_id=machinas`)
             .expect(500)
             .end((err, res) => {
               sinon.assert.calledOnce(database.accounts.getAccounts)
@@ -674,7 +674,7 @@ describe('API', () => {
         it('returns 500 when getBucketForAccount fails', done => {
           cloud.getBucketForAccount.rejects(new Error('Crazy API Error'))
           supertest(app)
-            .get(`/api/_internal/scripts?machine_id=machinas`)
+            .get(`/api/_internal/scripts?vm_id=machinas`)
             .expect(500)
             .end((err, res) => {
               sinon.assert.notCalled(database.machines.getMachines)
@@ -687,13 +687,13 @@ describe('API', () => {
           cloud.getBucketForAccount.resolves('eureka-account-1234')
           database.machines.getMachines.rejects(new Error('Crazy API error'))
           supertest(app)
-            .get(`/api/_internal/scripts?machine_id=machinas`)
+            .get(`/api/_internal/scripts?vm_id=machinas`)
             .expect(500, done)
         })
         it('returns 500 when no taskname tag for type-runner', done => {
           cloud.getInstanceTags.resolves(['type-runner', 'account-1234'])
           supertest(app)
-            .get(`/api/_internal/scripts?machine_id=machinas`)
+            .get(`/api/_internal/scripts?vm_id=machinas`)
             .expect(500)
             .end((err, res) => {
               sinon.assert.calledOnce(cloud.getInstanceTags)
@@ -704,7 +704,7 @@ describe('API', () => {
         it('returns 500 when no account tag for type-runner', done => {
           cloud.getInstanceTags.resolves(['type-runner', 'taskname-1234'])
           supertest(app)
-            .get(`/api/_internal/scripts?machine_id=machinas`)
+            .get(`/api/_internal/scripts?vm_id=machinas`)
             .expect(500)
             .end((err, res) => {
               sinon.assert.calledOnce(cloud.getInstanceTags)
