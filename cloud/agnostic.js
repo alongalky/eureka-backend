@@ -27,7 +27,7 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
         .then(vmId => controller.terminateInstance(vmId)),
     runTask: (taskId, params) => {
       return database.tasks.changeTaskStatusInitializing(taskId)
-        .then(() => database.machines.getMachines({ account: params.account }))
+        .then(() => database.machines.getMachines(params.account))
         .then(machines => machines.find(machine => machine.name === params.machineName))
         .then(machine => snapshotMachine({ machine, taskId, params }))
         .then(imageLocator =>

@@ -475,7 +475,7 @@ describe('API', () => {
           .end((err, res) => {
             expect(res.body).to.not.be.empty
             expect(res.body).to.have.lengthOf(3)
-            sinon.assert.calledWithMatch(database.machines.getMachines, { account: 'b9fe526d-6c9c-4c59-a705-c145c39c0a91' })
+            sinon.assert.calledWithMatch(database.machines.getMachines, 'b9fe526d-6c9c-4c59-a705-c145c39c0a91')
             expect(res.body[0]).to.deep.equal({
               machine_id: 'machina',
               name: 'betsy',

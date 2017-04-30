@@ -4,7 +4,7 @@ const logger = require('../../logger/logger')()
 module.exports = ({ database, config, cloud }) => {
   const buildMachinasScript = (vmId, tags) => {
     const waitForDocker = 'while ! docker ps &> /dev/null; do sleep 1; done'
-    return database.accounts.getAccounts({vmId})
+    return database.accounts.getAccounts(vmId)
       .then(accounts => {
         const accountIds = accounts.map(account => account.account_id)
         return Promise.all([

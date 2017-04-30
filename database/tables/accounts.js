@@ -19,7 +19,7 @@ module.exports = {
     return connection().query(query, [account])
       .then(([rows, fields]) => rows.length > 0 ? rows[0] : null)
   },
-  getAccounts: ({vmId}) => {
+  getAccounts: vmId => {
     const query =
       'SELECT accounts.* ' +
       'FROM machines ' +

@@ -112,7 +112,7 @@ describe('Cloud controller', () => {
       it('the right machine and container are obtained, resolved, tagged and pushed', done => {
         cloud.runTask(taskId, params)
           .then(() => {
-            sinon.assert.calledWith(database.machines.getMachines, { account: '9876' })
+            sinon.assert.calledWith(database.machines.getMachines, '9876')
             sinon.assert.calledWith(Dockerode.prototype.getContainer, 'abcd')
             sinon.assert.alwaysCalledWith(dContainer.commit, { repo: '9876', tag: '1234' })
             sinon.assert.calledWithMatch(googleController.pushImage, { taskId: '1234', params })
