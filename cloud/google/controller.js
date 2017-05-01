@@ -43,7 +43,8 @@ module.exports = ({ config, gce, gAuth }) => {
         metadata: {
           items: [
             {
-              eureka_endpoint: config.eureka_endpoint
+              key: 'eureka_endpoint',
+              value: config.eureka_endpoint
             }
           ]
         },
