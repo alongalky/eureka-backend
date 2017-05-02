@@ -7,10 +7,9 @@ module.exports = ({ database, config, cloud }) => {
   const buildMachinasScript = (vmId, tags) => {
     return database.accounts.getAccounts(vmId)
       .then(accounts => {
-        const accountIds = accounts.map(account => account.account_id)
         return Promise.all([
-          Promise.all(accountIds.map(accountId => cloud.getBucketForAccount(accountId))),
-          Promise.all(accountIds.map(accountId => database.machines.getMachines(accountId)))
+          Promise.all(accounts.map(account => cloud.getBucketForAccount(account.account_id))),
+          Promise.all(accounts.map(account => database.machines.getMachines(account.account_id)))
         ])
           .then(([buckets, machines]) => {
             let commands = []
@@ -40,10 +39,9 @@ module.exports = ({ database, config, cloud }) => {
               container=$(docker ps | tail -n+2 | awk '{ print $1 }')
             if [ -z $container ]; then
               sleep 1
-            else
-              docker logs -t -f $container &> $logpath &
             fi
           done
+          docker logs -t -f $container &> $logpath &
         `
       )
   }
