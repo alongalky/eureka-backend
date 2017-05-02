@@ -13,8 +13,7 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
       delays
     )
   const snapshotMachine = ({ machine, taskId, params }) =>
-    // TODO: this should be changed to internal, external IP will have Docker firewalled
-    controller.resolveInstanceExternalIp(machine.vm_id)
+    controller.resolveInstanceInternalIp(machine.vm_id)
       .then(ip => {
         const docker = new Dockerode({ host: ip, port: config.docker_port })
         const container = docker.getContainer(machine.container_id)

@@ -26,6 +26,7 @@ describe('Cloud controller', () => {
       controls: 'google',
       runInstance: sinon.stub(),
       resolveInstanceExternalIp: sinon.stub(),
+      resolveInstanceInternalIp: sinon.stub(),
       pushImage: sinon.stub(),
       pullImage: sinon.stub()
     }
@@ -53,6 +54,7 @@ describe('Cloud controller', () => {
       googleController.pullImage.reset()
       googleController.pushImage.reset()
       googleController.resolveInstanceExternalIp.reset()
+      googleController.resolveInstanceInternalIp.reset()
       database.tasks.changeTaskStatusInitializing.reset()
       database.tasks.changeTaskStatusRunning.reset()
       database.tasks.changeTaskStatusError.reset()
@@ -79,7 +81,7 @@ describe('Cloud controller', () => {
         database.tasks.changeTaskStatusInitializing.resolves()
         database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
         googleController.runInstance.resolves({ ip: '1.2.3.4' })
-        googleController.resolveInstanceExternalIp.resolves('9.8.7.6')
+        googleController.resolveInstanceInternalIp.resolves('9.8.7.6')
         googleController.pushImage.resolves(remoteImageName)
         googleController.pullImage.resolves()
         Dockerode.prototype.run.returns({ on: (event, callback) => callback('1423') })
@@ -116,7 +118,7 @@ describe('Cloud controller', () => {
             sinon.assert.calledWith(Dockerode.prototype.getContainer, 'abcd')
             sinon.assert.alwaysCalledWith(dContainer.commit, { repo: '9876', tag: '1234' })
             sinon.assert.calledWithMatch(googleController.pushImage, { taskId: '1234', params })
-            sinon.assert.calledWith(googleController.resolveInstanceExternalIp, 'Vm987')
+            sinon.assert.calledWith(googleController.resolveInstanceInternalIp, 'Vm987')
             done()
           })
       })
@@ -147,7 +149,7 @@ describe('Cloud controller', () => {
       })
       it('does not initialize any Docker controller if resolving IP for VM fails', done => {
         database.tasks.changeTaskStatusInitializing.resolves()
-        googleController.resolveInstanceExternalIp.rejects(new Error('Crazy API Error'))
+        googleController.resolveInstanceInternalIp.rejects(new Error('Crazy API Error'))
 
         cloud.runTask('1234', params)
           .then(() => {
@@ -160,13 +162,13 @@ describe('Cloud controller', () => {
       it('transitions task to Error if commit fails over the machina\'s Docker controller', done => {
         database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
         database.tasks.changeTaskStatusInitializing.resolves()
-        googleController.resolveInstanceExternalIp.resolves('9.8.7.6')
+        googleController.resolveInstanceInternalIp.resolves('9.8.7.6')
         dContainer.commit.rejects(new Error('Crazy Docker Error'))
 
         cloud.runTask('1234', params)
           .then(() => {
             sinon.assert.calledOnce(Dockerode)
-            sinon.assert.calledWith(googleController.resolveInstanceExternalIp, 'Vm987')
+            sinon.assert.calledWith(googleController.resolveInstanceInternalIp, 'Vm987')
             sinon.assert.calledWithMatch(Dockerode, { host: '9.8.7.6' })
             sinon.assert.notCalled(googleController.pushImage)
             sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
@@ -176,14 +178,14 @@ describe('Cloud controller', () => {
       it('transitions task to Error if push fails over the machina\'s Docker controller', done => {
         database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
         database.tasks.changeTaskStatusInitializing.resolves()
-        googleController.resolveInstanceExternalIp.resolves('9.8.7.6')
+        googleController.resolveInstanceInternalIp.resolves('9.8.7.6')
         dContainer.commit.resolves()
         googleController.pushImage.rejects(new Error('Crazy Docker Error'))
 
         cloud.runTask('1234', params)
           .then(() => {
             sinon.assert.calledOnce(Dockerode)
-            sinon.assert.calledWith(googleController.resolveInstanceExternalIp, 'Vm987')
+            sinon.assert.calledWith(googleController.resolveInstanceInternalIp, 'Vm987')
             sinon.assert.calledWithMatch(Dockerode, { host: '9.8.7.6' })
             sinon.assert.notCalled(googleController.runInstance)
             sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
@@ -193,7 +195,7 @@ describe('Cloud controller', () => {
       it('transitions task to Error if runInstance fails over the machina\'s Docker controller', done => {
         database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
         database.tasks.changeTaskStatusInitializing.resolves()
-        googleController.resolveInstanceExternalIp.resolves('9.8.7.6')
+        googleController.resolveInstanceInternalIp.resolves('9.8.7.6')
         dContainer.commit.resolves()
         googleController.pushImage.resolves()
         googleController.runInstance.rejects(new Error('Crazy API error'))
@@ -201,7 +203,7 @@ describe('Cloud controller', () => {
         cloud.runTask('1234', params)
           .then(() => {
             sinon.assert.calledOnce(Dockerode)
-            sinon.assert.calledWith(googleController.resolveInstanceExternalIp, 'Vm987')
+            sinon.assert.calledWith(googleController.resolveInstanceInternalIp, 'Vm987')
             sinon.assert.calledWithMatch(Dockerode, { host: '9.8.7.6' })
             sinon.assert.notCalled(googleController.pullImage)
             sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
@@ -211,7 +213,7 @@ describe('Cloud controller', () => {
       it('transitions task to Error if docker pull fails', done => {
         database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
         database.tasks.changeTaskStatusInitializing.resolves()
-        googleController.resolveInstanceExternalIp.resolves('9.8.7.6')
+        googleController.resolveInstanceInternalIp.resolves('9.8.7.6')
         dContainer.commit.resolves()
         googleController.pushImage.resolves(remoteImageName)
         googleController.runInstance.resolves({ ip: '2.2.2.2' })
@@ -222,7 +224,7 @@ describe('Cloud controller', () => {
             sinon.assert.calledTwice(Dockerode)
             sinon.assert.calledWithMatch(Dockerode, { host: '9.8.7.6' })
             sinon.assert.calledWithMatch(Dockerode, { host: '2.2.2.2' })
-            sinon.assert.calledWith(googleController.resolveInstanceExternalIp, 'Vm987')
+            sinon.assert.calledWith(googleController.resolveInstanceInternalIp, 'Vm987')
             sinon.assert.calledWithMatch(googleController.pullImage, { image: remoteImageName })
             sinon.assert.notCalled(Dockerode.prototype.run)
             sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
@@ -232,7 +234,7 @@ describe('Cloud controller', () => {
       it('transitions task to Error if docker run fails', done => {
         database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
         database.tasks.changeTaskStatusInitializing.resolves()
-        googleController.resolveInstanceExternalIp.resolves('9.8.7.6')
+        googleController.resolveInstanceInternalIp.resolves('9.8.7.6')
         dContainer.commit.resolves()
         googleController.pushImage.resolves(remoteImageName)
         googleController.runInstance.resolves({ ip: '2.2.2.2' })
@@ -244,7 +246,7 @@ describe('Cloud controller', () => {
             sinon.assert.calledTwice(Dockerode)
             sinon.assert.calledWithMatch(Dockerode, { host: '9.8.7.6' })
             sinon.assert.calledWithMatch(Dockerode, { host: '2.2.2.2' })
-            sinon.assert.calledWith(googleController.resolveInstanceExternalIp, 'Vm987')
+            sinon.assert.calledWith(googleController.resolveInstanceInternalIp, 'Vm987')
             sinon.assert.calledWithMatch(googleController.pullImage, { image: remoteImageName })
             sinon.assert.notCalled(database.tasks.changeTaskStatusRunning)
             sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
@@ -291,9 +293,7 @@ describe('Cloud controller', () => {
         gZone.createVM.resolves([gVm])
         gVm.waitFor.resolves([{
           networkInterfaces: [{
-            accessConfigs: [{
-              natIP: '1.2.3.4'
-            }]
+            networkIP: '1.2.3.4'
           }]
         }])
 

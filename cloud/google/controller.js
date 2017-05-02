@@ -87,7 +87,7 @@ module.exports = ({ config, gce, gAuth }) => {
         .then(([vmMetadata]) => {
           logger.info('VM %s started', vmName)
           return {
-            ip: vmMetadata.networkInterfaces[0].accessConfigs[0].natIP
+            ip: vmMetadata.networkInterfaces[0].networkIP
           }
         })
         .catch(err => {
