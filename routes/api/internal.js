@@ -2,8 +2,9 @@ const util = require('util')
 const logger = require('../../logger/logger')()
 
 module.exports = ({ database, config, cloud }) => {
+  const waitForDocker = 'while ! docker ps &> /dev/null; do sleep 1; done'
+  const startDocker = '/bin/systemctl start docker'
   const buildMachinasScript = (vmId, tags) => {
-    const waitForDocker = 'while ! docker ps &> /dev/null; do sleep 1; done'
     return database.accounts.getAccounts(vmId)
       .then(accounts => {
         const accountIds = accounts.map(account => account.account_id)
@@ -15,8 +16,9 @@ module.exports = ({ database, config, cloud }) => {
             let commands = []
             buckets.map(bucket => {
               commands.push(`mkdir -p /mnt/${bucket}`)
-              commands.push(`gcsfuse ${bucket} /mnt/${bucket}`)
+              commands.push(`gcsfuse --limit-ops-per-sec -1 --stat-cache-ttl 1s --type-cache-ttl 1s ${bucket} /mnt/${bucket}`)
             })
+            commands.push(startDocker)
             commands.push(waitForDocker)
             machines.reduce((acc, val) => acc.concat(val), []).filter(machine => machine.vm_id === vmId)
               .forEach(machine => commands.push(`docker start ${machine.container_id}`))
@@ -31,8 +33,9 @@ module.exports = ({ database, config, cloud }) => {
       .then(bucket =>
         `
           mkdir -p /mnt/${bucket}
-          gcsfuse ${bucket} /mnt/${bucket}
+          gcsfuse --limit-ops-per-sec -1 --stat-cache-ttl 1s --type-cache-ttl 1s ${bucket} /mnt/${bucket}
           logpath=/mnt/${bucket}/logs-${taskName}
+          ${startDocker}
           while [ -z $container ]; do
               container=$(docker ps | tail -n+2 | awk '{ print $1 }')
             if [ -z $container ]; then
