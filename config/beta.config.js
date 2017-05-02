@@ -6,7 +6,7 @@ const instanceName = 'eureka-beta:us-east1:eureka-beta-sql'
 module.exports = {
   google: {
     project: 'eureka-beta',
-    instance_image: 'docker-gcfuse-enabled',
+    instance_image: 'docker-gcfuse-scripts',
     docker_registry: 'us.gcr.io'
   },
   database: {
