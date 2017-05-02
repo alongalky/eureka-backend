@@ -11,7 +11,7 @@ module.exports = ({ database, cloud }) => {
         }
 
         const account = req.params.account_id
-        return database.machines.getMachines({account})
+        return database.machines.getMachines(account)
           .then(allMachines =>
             Promise.all(allMachines.map(machine =>
               cloud.resolveInstanceExternalIp(machine.vm_id)

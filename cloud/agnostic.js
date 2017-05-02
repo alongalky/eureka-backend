@@ -7,14 +7,13 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
   const persevereRunImagePromisified = ({ docker, image, streams, command, opts, delays }) =>
     persevere(() =>
       new Promise((resolve, reject) =>
-        docker.run(image, '/bin/sh -c'.split(' ').concat(command), null, opts, err => reject(err))
+        docker.run(image, '/bin/sh -l -c'.split(' ').concat(command), null, opts, err => reject(err))
           .on('container', container => resolve(container))
       ),
       delays
     )
   const snapshotMachine = ({ machine, taskId, params }) =>
-    // TODO: this should be changed to internal, external IP will have Docker firewalled
-    controller.resolveInstanceExternalIp(machine.vm_id)
+    controller.resolveInstanceInternalIp(machine.vm_id)
       .then(ip => {
         const docker = new Dockerode({ host: ip, port: config.docker_port })
         const container = docker.getContainer(machine.container_id)
@@ -27,7 +26,7 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
         .then(vmId => controller.terminateInstance(vmId)),
     runTask: (taskId, params) => {
       return database.tasks.changeTaskStatusInitializing(taskId)
-        .then(() => database.machines.getMachines({ account: params.account }))
+        .then(() => database.machines.getMachines(params.account))
         .then(machines => machines.find(machine => machine.name === params.machineName))
         .then(machine => snapshotMachine({ machine, taskId, params }))
         .then(imageLocator =>
@@ -54,6 +53,8 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
           logger.error('Task %s deployment failed but status could not be updated', taskId, err)
         })
     },
-    resolveInstanceExternalIp: vmId => controller.resolveInstanceExternalIp(vmId)
+    resolveInstanceExternalIp: vmId => controller.resolveInstanceExternalIp(vmId),
+    getInstanceTags: vmId => controller.getInstanceTags(vmId),
+    getBucketForAccount: account => controller.getBucketForAccount(account)
   }
 }

@@ -16,6 +16,7 @@ module.exports = ({ database, cloud, config, authStrategy }) => {
   apiRouter.post('/authenticate', authenticateApi.authenticate)
 
   apiRouter.put('/_internal/tasks/:task_id', internalApi.putTask)
+  apiRouter.get('/_internal/scripts', internalApi.getScript)
 
   passport.use(authStrategy)
   apiRouter.use('/accounts/:account_id', passport.authenticate('jwt', {session: false}), accountsRouter)
