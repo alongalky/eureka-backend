@@ -7,7 +7,7 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
   const persevereRunImagePromisified = ({ docker, image, streams, command, opts, delays }) =>
     persevere(() =>
       new Promise((resolve, reject) =>
-        docker.run(image, '/bin/sh -c'.split(' ').concat(command), null, opts, err => reject(err))
+        docker.run(image, '/bin/sh -l -c'.split(' ').concat(command), null, opts, err => reject(err))
           .on('container', container => resolve(container))
       ),
       delays
