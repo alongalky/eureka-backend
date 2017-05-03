@@ -63,7 +63,7 @@ module.exports = ({ config, gce, gAuth }) => {
           automaticRestart: false
         },
         serviceAccounts: [ {
-          email: '760853174060-compute@developer.gserviceaccount.com',
+          email: config.google.project_service_account,
           scopes: [
             'https://www.googleapis.com/auth/datastore',
             'https://www.googleapis.com/auth/compute',

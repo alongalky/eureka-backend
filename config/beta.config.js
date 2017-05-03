@@ -4,8 +4,10 @@ const database = 'eureka_beta'
 const instanceName = 'eureka-beta:us-east1:eureka-beta-sql'
 
 module.exports = {
+  eureka_endpoint: 'https://eureka-beta.appspot.com',
   google: {
     project: 'eureka-beta',
+    project_service_account: '614729623195-compute@developer.gserviceaccount.com',
     instance_image: 'docker-gcfuse-scripts',
     docker_registry: 'us.gcr.io'
   },
