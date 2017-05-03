@@ -11,7 +11,7 @@ describe('Cloud controller', () => {
       region: 'us-east1',
       zone: 'us-east1-b',
       project: 'striped-zebra-11',
-      instance_image: 'awesome-machine',
+      instance_image: 'awesome-image',
       docker_registry: 'us.docker.registry.io'
     }
   }
@@ -39,6 +39,9 @@ describe('Cloud controller', () => {
       },
       machines: {
         getMachines: sinon.stub()
+      },
+      tiers: {
+        getTier: sinon.stub()
       }
     }
     const dContainer = {
@@ -60,6 +63,7 @@ describe('Cloud controller', () => {
       database.tasks.changeTaskStatusError.reset()
       database.tasks.changeTaskStatusDone.reset()
       database.machines.getMachines.reset()
+      database.tiers.getTier.reset()
       Dockerode.reset()
       Dockerode.prototype.run.reset()
       dContainer.commit.reset()
@@ -75,11 +79,12 @@ describe('Cloud controller', () => {
       persevere
     })
     const remoteImageName = [[config.google.docker_registry, config.google.project, params.account].join('/'), taskId].join(':')
-
+    const tier = { cloud_type_name: 'micro', local_disk_gb: 20 }
     describe('happy flow', () => {
       beforeEach(() => {
         database.tasks.changeTaskStatusInitializing.resolves()
         database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
+        database.tiers.getTier.resolves(tier)
         googleController.runInstance.resolves({ ip: '1.2.3.4' })
         googleController.resolveInstanceInternalIp.resolves('9.8.7.6')
         googleController.pushImage.resolves(remoteImageName)
@@ -126,7 +131,7 @@ describe('Cloud controller', () => {
         cloud.runTask(taskId, params)
           .then(() => {
             sinon.assert.calledOnce(googleController.runInstance)
-            sinon.assert.calledWith(googleController.runInstance, '1234', params)
+            sinon.assert.calledWith(googleController.runInstance, { taskId: '1234', tier, params })
             sinon.assert.alwaysCalledWithMatch(googleController.pullImage, { image: remoteImageName })
             done()
           })
@@ -214,6 +219,7 @@ describe('Cloud controller', () => {
         database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
         database.tasks.changeTaskStatusInitializing.resolves()
         googleController.resolveInstanceInternalIp.resolves('9.8.7.6')
+        database.tiers.getTier.resolves(tier)
         dContainer.commit.resolves()
         googleController.pushImage.resolves(remoteImageName)
         googleController.runInstance.resolves({ ip: '2.2.2.2' })
@@ -235,6 +241,7 @@ describe('Cloud controller', () => {
         database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
         database.tasks.changeTaskStatusInitializing.resolves()
         googleController.resolveInstanceInternalIp.resolves('9.8.7.6')
+        database.tiers.getTier.resolves(tier)
         dContainer.commit.resolves()
         googleController.pushImage.resolves(remoteImageName)
         googleController.runInstance.resolves({ ip: '2.2.2.2' })
@@ -289,6 +296,7 @@ describe('Cloud controller', () => {
     })
 
     describe('runInstance', () => {
+      const tier = { cloud_type_name: 'micro', local_disk_gb: 20 }
       it('on happy flow formatted VM metadata is returned', done => {
         gZone.createVM.resolves([gVm])
         gVm.waitFor.resolves([{
@@ -297,7 +305,7 @@ describe('Cloud controller', () => {
           }]
         }])
 
-        googleController.runInstance('1234', {})
+        googleController.runInstance({ taskId: '1234', tier, params: {} })
           .then(vm => {
             sinon.assert.calledOnce(gZone.createVM)
             // Checks if instance gets named correctly
@@ -325,7 +333,7 @@ describe('Cloud controller', () => {
           }]
         }])
 
-        googleController.runInstance('1234', params)
+        googleController.runInstance({ taskId: '1234', tier, params })
           .then(vm => {
             sinon.assert.calledOnce(gZone.createVM)
             // Checks if instance gets tagged correctly
@@ -342,12 +350,76 @@ describe('Cloud controller', () => {
             done()
           })
       })
+      it('on happy flow instance has proper disk image, size and type standard', done => {
+        const tier = { cloud_type_name: 'micro', local_disk_gb: 20 }
+        gZone.createVM.resolves([gVm])
+        gVm.waitFor.resolves([{
+          networkInterfaces: [{
+            accessConfigs: [{
+              natIP: '1.2.3.4'
+            }]
+          }]
+        }])
+
+        googleController.runInstance({ taskId: '1234', tier, params: {} })
+          .then(vm => {
+            sinon.assert.calledOnce(gZone.createVM)
+            sinon.assert.calledWithMatch(gZone.createVM, 'runner-1234',
+              {
+                machineType: tier.cloud_type_name,
+                disks: [{
+                  autoDelete: true,
+                  boot: true,
+                  initializeParams: {
+                    diskSizeGb: 20,
+                    diskType: `projects/${config.google.project}/zones/${config.google.zone}/diskTypes/pd-standard`,
+                    sourceImage: `projects/${config.google.project}/global/images/${config.google.instance_image}`
+                  },
+                  mode: 'READ_WRITE'
+                }]
+              }
+            )
+            done()
+          })
+      })
+      it('on happy flow instance has proper disk image, size and type ssd', done => {
+        const tier = { cloud_type_name: 'micro', ssd_disk_gb: 80 }
+        gZone.createVM.resolves([gVm])
+        gVm.waitFor.resolves([{
+          networkInterfaces: [{
+            accessConfigs: [{
+              natIP: '1.2.3.4'
+            }]
+          }]
+        }])
+
+        googleController.runInstance({ taskId: '1234', tier, params: {} })
+          .then(vm => {
+            sinon.assert.calledOnce(gZone.createVM)
+            sinon.assert.calledWithMatch(gZone.createVM, 'runner-1234',
+              {
+                machineType: tier.cloud_type_name,
+                disks: [{
+                  autoDelete: true,
+                  boot: true,
+                  initializeParams: {
+                    diskSizeGb: 80,
+                    diskType: `projects/${config.google.project}/zones/${config.google.zone}/diskTypes/pd-ssd`,
+                    sourceImage: `projects/${config.google.project}/global/images/${config.google.instance_image}`
+                  },
+                  mode: 'READ_WRITE'
+                }]
+              }
+            )
+            done()
+          })
+      })
       it('throws and deletes instance on createVM API error', done => {
         gZone.createVM.rejects(new Error('Crazy API Error'))
         gZone.vm.returns(deleteVm)
         deleteVm.delete.resolves()
 
-        googleController.runInstance('1234', {})
+        googleController.runInstance({ taskId: '1234', tier, params: {} })
         // Notice the catch
           .catch(() => {
             sinon.assert.calledOnce(gZone.vm)
@@ -363,7 +435,7 @@ describe('Cloud controller', () => {
         deleteVm.delete.resolves()
         gVm.waitFor.rejects(new Error('waitFor API Error'))
 
-        googleController.runInstance('1234', {})
+        googleController.runInstance({ taskId: '1234', tier, params: {} })
           .catch(() => {
             sinon.assert.calledOnce(gZone.vm)
             sinon.assert.calledWith(gZone.vm, 'runner-1234')
@@ -372,6 +444,7 @@ describe('Cloud controller', () => {
           })
       })
     })
+
     describe('Docker registry interactions', () => {
       const dImage = {
         push: null,

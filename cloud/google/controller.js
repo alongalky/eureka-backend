@@ -19,19 +19,19 @@ module.exports = ({ config, gce, gAuth }) => {
     findInstanceForTask: taskId => Promise.resolve('runner-' + taskId),
     getInstanceTags: instanceId => gZone.vm(instanceId).getTags().then(([tags]) => tags),
     getBucketForAccount: account => Promise.resolve('eureka-account-' + account),
-    runInstance: (taskId, params) => {
+    runInstance: ({ taskId, tier, params }) => {
+      const standardDisk = `projects/${config.google.project}/zones/${config.google.zone}/diskTypes/pd-standard`
+      const ssdDisk = `projects/${config.google.project}/zones/${config.google.zone}/diskTypes/pd-ssd`
       const instanceConfig = {
-        // TODO: change to actual instance type specified in params
-        machineType: 'f1-micro',
+        machineType: tier.cloud_type_name,
         disks: [ {
           boot: true,
           mode: 'READ_WRITE',
           autoDelete: true,
           initializeParams: {
             sourceImage: `projects/${config.google.project}/global/images/${config.google.instance_image}`,
-            diskType: `projects/${config.google.project}/zones/${config.google.zone}/diskTypes/pd-standard`,
-            // TODO: change to actual disk size for the tier
-            diskSizeGb: '10'
+            diskType: tier.local_disk_gb > 0 ? standardDisk : ssdDisk,
+            diskSizeGb: tier.local_disk_gb || tier.ssd_disk_gb
           }
         } ],
         tags: [

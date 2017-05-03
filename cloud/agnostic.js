@@ -29,8 +29,9 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
         .then(() => database.machines.getMachines(params.account))
         .then(machines => machines.find(machine => machine.name === params.machineName))
         .then(machine => snapshotMachine({ machine, taskId, params }))
-        .then(imageLocator =>
-          controller.runInstance(taskId, params)
+        .then(imageLocator => database.tiers.getTier(params.tierId)
+          .then(tier =>
+            controller.runInstance({ taskId, tier, params })
             .then(vm => {
               const docker = new Dockerode({ host: vm.ip, port: config.docker_port })
               return persevere(() => controller.pullImage({ docker, image: imageLocator }), Array(6).fill(moment.duration(5, 'seconds')))
@@ -43,6 +44,7 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
                 .then(() => database.tasks.changeTaskStatusRunning(taskId))
                 .then(() => logger.info('Task %s running', taskId))
             })
+          )
         )
         .catch(err => {
           logger.error('Error starting task', taskId, err)
