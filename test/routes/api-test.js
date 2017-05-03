@@ -131,8 +131,7 @@ describe('API', () => {
         command: 'hello world',
         machineName: 'machina',
         taskName: 'tasky',
-        tier: 'tiny',
-        output: '/output'
+        tier: 'tiny'
       }
 
       const tiers = [{
@@ -156,7 +155,6 @@ describe('API', () => {
               sinon.assert.calledOnce(database.tasks.getTasks)
               sinon.assert.alwaysCalledWithMatch(database.tasks.addTask, {
                 command: 'hello world',
-                output: '/output',
                 machineName: 'machina',
                 taskName: 'tasky',
                 tierId: '12345',
@@ -264,7 +262,7 @@ describe('API', () => {
       })
 
       describe('Parameter verification', () => {
-        for (let prop of ['command', 'output', 'machineName', 'taskName']) {
+        for (let prop of ['command', 'machineName', 'taskName']) {
           it(`returns 422 when ${prop} is too long`, done => {
             const badParams = Object.assign({}, goodParams, { [prop]: 'h'.repeat(256) })
 

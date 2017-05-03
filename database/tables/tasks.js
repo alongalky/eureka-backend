@@ -18,7 +18,7 @@ const getTasks = ({account}) => {
     .then(([rows, fields]) => rows)
 }
 
-const addTask = ({command, output, machineName, taskName, tierId, account}) => {
+const addTask = ({command, machineName, taskName, tierId, account}) => {
   const findMachineIdQuery =
     'SELECT machines.machine_id ' +
     'FROM machines ' +
