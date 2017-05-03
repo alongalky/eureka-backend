@@ -18,7 +18,6 @@ module.exports = ({ database, cloud }) => {
         .then(tiers => {
           // Validation
           req.checkBody('command', 'Expected command between 1 to 255 characters').notEmpty().isLength({min: 1, max: 255})
-          req.checkBody('output', 'Missing output folder').notEmpty().isLength({min: 1, max: 255})
           req.checkBody('machineName', 'Missing machineName').notEmpty().isLength({min: 1, max: 255})
           req.checkBody('taskName', 'Missing taskName').notEmpty().isLength({min: 1, max: 255})
           const tierNames = tiers.map(t => t.name)
@@ -54,7 +53,6 @@ module.exports = ({ database, cloud }) => {
                   const tierId = tiers.find(t => t.name === req.body.tier).tier_id
                   const params = {
                     command: req.body.command,
-                    output: req.body.output,
                     machineName: req.body.machineName,
                     taskName: req.body.taskName,
                     tierId,
@@ -63,7 +61,7 @@ module.exports = ({ database, cloud }) => {
 
                   return database.tasks.addTask(params)
                     .then(taskId => {
-                      res.status(201).send({message: 'Task queued successfuly'})
+                      res.status(201).send({message: 'Task queued successfully'})
                       // This call could fail against the API, but we return a 201 anyway.
                       // Instance is transitioned to Error status in case of an API error.
                       cloud.runTask(taskId, params)
