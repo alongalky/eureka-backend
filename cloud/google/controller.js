@@ -30,7 +30,7 @@ module.exports = ({ config, gce, gAuth }) => {
           autoDelete: true,
           initializeParams: {
             sourceImage: `projects/${config.google.project}/global/images/${config.google.instance_image}`,
-            diskType: tier.local_disk_gb > 0 ? standardDisk : ssdDisk,
+            diskType: tier.local_disk_gb ? standardDisk : ssdDisk,
             diskSizeGb: tier.local_disk_gb || tier.ssd_disk_gb
           }
         } ],
