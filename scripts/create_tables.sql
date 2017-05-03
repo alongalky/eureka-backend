@@ -35,6 +35,7 @@ CREATE TABLE tiers
   `local_disk_gb` INT NOT NULL,
   `ssd_disk_gb` INT NOT NULL,
   `cloud_storage_gb` INT NOT NULL,
+  `cloud_type_name` VARCHAR(255) NOT NULL,
   PRIMARY KEY (tier_id)
 );
 
