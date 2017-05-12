@@ -17,6 +17,7 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
       .then(ip => {
         const docker = new Dockerode({ host: ip, port: config.docker_port })
         const container = docker.getContainer(machine.container_id)
+        logger.info('Committing container %s from %s', machine.container_id, machine.vm_id)
         return persevere(() => container.commit({ repo: params.account, tag: taskId }), [moment.duration(5, 'seconds')])
           .then(() => controller.pushImage({ docker, taskId, params }))
       })
