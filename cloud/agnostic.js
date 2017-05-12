@@ -20,10 +20,12 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
         return persevere(() => container.commit({ repo: params.account, tag: taskId }), [moment.duration(5, 'seconds')])
           .then(() => controller.pushImage({ docker, taskId, params }))
       })
-  return {
-    terminateTask: taskId =>
+  const terminateTask = taskId =>
       controller.findInstanceForTask(taskId)
-        .then(vmId => controller.terminateInstance(vmId)),
+        .then(vmId => controller.terminateInstance(vmId))
+
+  return {
+    terminateTask,
 
     runTask: (taskId, params) =>
       database.tasks.changeTaskStatusInitializing(taskId)
@@ -48,6 +50,7 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
         })
         .catch(err => {
           logger.error('Error starting task', taskId, err)
+          terminateTask(taskId).catch(() => {})
           return database.tasks.changeTaskStatusError(taskId)
         })
         .catch(err => {
