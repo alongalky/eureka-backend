@@ -33,7 +33,8 @@ module.exports = ({ database, config, cloud }) => {
         `
           mkdir -p /mnt/${bucket}
           gcsfuse --limit-ops-per-sec -1 --stat-cache-ttl 1s --type-cache-ttl 1s ${bucket} /mnt/${bucket}
-          logpath=/mnt/${bucket}/logs-${taskName}
+          logdir=/mnt/${bucket}/eureka-logs
+          mkdir -p $logdir
           ${startDocker}
           while [ -z $container ]; do
               container=$(docker ps | tail -n+2 | awk '{ print $1 }')
@@ -41,7 +42,7 @@ module.exports = ({ database, config, cloud }) => {
               sleep 1
             fi
           done
-          docker logs -t -f $container &> $logpath &
+          docker logs -t -f $container &> $logdir/logs-${taskName} &
         `
       )
   }
