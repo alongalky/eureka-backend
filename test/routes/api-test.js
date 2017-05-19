@@ -612,7 +612,7 @@ describe('API', () => {
             })
         })
         it('returns 200 on happy flow for type-runner', done => {
-          cloud.getInstanceTags.resolves(['type-runner', 'account-1234', 'taskname-9191'])
+          cloud.getInstanceTags.resolves(['type-runner', 'account-1234', 'task-9314', 'taskname-9191'])
           cloud.getBucketForAccount.resolves('eureka-account-1234')
           database.machines.getMachines.rejects(new Error('Crazy API error'))
           supertest(app)
@@ -690,6 +690,17 @@ describe('API', () => {
         })
         it('returns 500 when no taskname tag for type-runner', done => {
           cloud.getInstanceTags.resolves(['type-runner', 'account-1234'])
+          supertest(app)
+            .get(`/api/_internal/scripts?vm_id=machinas`)
+            .expect(500)
+            .end((err, res) => {
+              sinon.assert.calledOnce(cloud.getInstanceTags)
+
+              done(err)
+            })
+        })
+        it('returns 500 when no task tag for type-runner', done => {
+          cloud.getInstanceTags.resolves(['type-runner', 'account-1234', 'taskname-194'])
           supertest(app)
             .get(`/api/_internal/scripts?vm_id=machinas`)
             .expect(500)
