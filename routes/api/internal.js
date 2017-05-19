@@ -37,7 +37,7 @@ module.exports = ({ database, config, cloud }) => {
           mkdir -p $logdir
           ${startDocker}
           while [ -z $container ]; do
-              container=$(docker ps | tail -n+2 | awk '{ print $1 }')
+              container=$(docker ps --all | tail -n+2 | awk '{ print $1 }')
             if [ -z $container ]; then
               sleep 1
             fi
