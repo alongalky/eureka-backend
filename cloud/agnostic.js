@@ -52,7 +52,7 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
         ]))
         .then(([imageLocator, vm]) => {
           const docker = new Dockerode({ host: vm.ip, port: config.docker_port })
-          logger.info('Going to pull', imageLocator)
+          logger.info('Going to pull %s for task', imageLocator, taskId)
           return persevere(() => controller.pullImage({ docker, image: imageLocator }), Array(6).fill(moment.duration(5, 'seconds')))
             .then(() => logger.info('Successfully pulled %s on %s', imageLocator, vm.ip))
             .then(() => persevereRunImagePromisified({ docker, image: imageLocator, command: params.command, opts: containerBindsPerAccount(params.account), delays: [moment.duration(5, 'seconds')] }))
