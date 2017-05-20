@@ -19,8 +19,10 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
         const container = docker.getContainer(machine.container_id)
         logger.info('Committing container %s from %s', machine.container_id, machine.vm_id)
         return persevere(() => container.commit({ repo: params.account, tag: taskId }), [moment.duration(5, 'seconds')])
-          .then(() => logger.info('Going to push image for task', taskId))
-          .then(() => controller.pushImage({ docker, taskId, params }))
+          .then(() => {
+            logger.info('Going to push image for task', taskId)
+            return controller.pushImage({ docker, taskId, params })
+          })
           .then(imageLocator => {
             logger.info('Succesfully pushed', imageLocator)
             return imageLocator
@@ -42,9 +44,8 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
           database.tiers.getTier(params.tierId)
             .then(tier => {
               logger.info('VM for task %s starting', taskId)
-              return tier
+              return controller.runInstance({ taskId, tier, params })
             })
-            .then(tier => controller.runInstance({ taskId, tier, params }))
             .then(vm => {
               logger.info('VM for task %s started', taskId)
               return vm
