@@ -421,7 +421,7 @@ describe('Cloud controller', () => {
             done()
           })
       })
-      it('throws and deletes instance on createVM API error', done => {
+      it('throws and does not delete instance on createVM API error', done => {
         gZone.createVM.rejects(new Error('Crazy API Error'))
         gZone.vm.returns(deleteVm)
         deleteVm.delete.resolves()
@@ -429,14 +429,12 @@ describe('Cloud controller', () => {
         googleController.runInstance({ taskId: '1234', tier, params: {} })
         // Notice the catch
           .catch(() => {
-            sinon.assert.calledOnce(gZone.vm)
-            sinon.assert.calledWith(gZone.vm, 'runner-1234')
-            sinon.assert.calledOnce(deleteVm.delete)
+            sinon.assert.notCalled(deleteVm.delete)
             done()
           })
       })
 
-      it('throws and deletes instance when fails to wait for RUNNING state', (done) => {
+      it('throws and does not delete instance when fails to wait for RUNNING state', (done) => {
         gZone.createVM.resolves([gVm])
         gZone.vm.returns(deleteVm)
         deleteVm.delete.resolves()
@@ -444,9 +442,7 @@ describe('Cloud controller', () => {
 
         googleController.runInstance({ taskId: '1234', tier, params: {} })
           .catch(() => {
-            sinon.assert.calledOnce(gZone.vm)
-            sinon.assert.calledWith(gZone.vm, 'runner-1234')
-            sinon.assert.calledOnce(deleteVm.delete)
+            sinon.assert.notCalled(deleteVm.delete)
             done()
           })
       })

@@ -18,7 +18,14 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
         const container = docker.getContainer(machine.container_id)
         logger.info('Committing container %s from %s', machine.container_id, machine.vm_id)
         return persevere(() => container.commit({ repo: params.account, tag: taskId }), [moment.duration(5, 'seconds')])
-          .then(() => controller.pushImage({ docker, taskId, params }))
+          .then(() => {
+            logger.info('Going to push image for task', taskId)
+            return controller.pushImage({ docker, taskId, params })
+          })
+          .then(imageLocator => {
+            logger.info('Succesfully pushed', imageLocator)
+            return imageLocator
+          })
       })
   const terminateTask = taskId =>
       controller.findInstanceForTask(taskId)
@@ -34,10 +41,18 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
             .then(machines => machines.find(machine => machine.name === params.machineName))
             .then(machine => snapshotMachine({ machine, taskId, params })),
           database.tiers.getTier(params.tierId)
-            .then(tier => controller.runInstance({ taskId, tier, params }))
+            .then(tier => {
+              logger.info('VM for task %s starting', taskId)
+              return controller.runInstance({ taskId, tier, params })
+            })
+            .then(vm => {
+              logger.info('VM for task %s started', taskId)
+              return vm
+            })
         ]))
         .then(([imageLocator, vm]) => {
           const docker = new Dockerode({ host: vm.ip, port: config.docker_port })
+          logger.info('Going to pull', imageLocator)
           return persevere(() => controller.pullImage({ docker, image: imageLocator }), Array(6).fill(moment.duration(5, 'seconds')))
             .then(() => logger.info('Successfully pulled %s on %s', imageLocator, vm.ip))
             .then(() => {

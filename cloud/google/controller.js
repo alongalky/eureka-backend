@@ -1,5 +1,3 @@
-const logger = require('../../logger/logger')()
-
 module.exports = ({ config, gce, gAuth }) => {
   const gZone = gce.zone(config.google.zone)
   const getGAuthToken = () =>
@@ -80,43 +78,15 @@ module.exports = ({ config, gce, gAuth }) => {
       const vmName = ['runner', taskId].join('-')
 
       return gZone.createVM(vmName, instanceConfig)
-        .then(([vm, operation, apiResponse]) => {
-          logger.info('VM %s starting', vmName)
-          return vm.waitFor('RUNNING')
-        })
-        .then(([vmMetadata]) => {
-          logger.info('VM %s started', vmName)
-          return {
-            ip: vmMetadata.networkInterfaces[0].networkIP
-          }
-        })
-        .catch(err => {
-          logger.error('Error starting VM for task', taskId, err)
-          return gZone.vm(vmName).delete()
-            .catch(err => {
-              // TODO: Alert
-              logger.error('Impossible to remove failed VM %s', vmName, err)
-            })
-            .then(() => Promise.reject(err))
-        })
+        .then(([vm]) => vm.waitFor('RUNNING'))
+        .then(([vmMetadata]) => ({ ip: vmMetadata.networkInterfaces[0].networkIP }))
     },
-    terminateInstance: vmId => {
-      const vm = gZone.vm(vmId)
-      return vm.delete()
-      .then(() => {
-        logger.info('Terminated instance %s', vm.name)
-      })
-      .catch(err => {
-        logger.error('Error terminating instance %s', vm.name, err)
-        return Promise.reject(err)
-      })
-    },
+    terminateInstance: vmId => gZone.vm(vmId).delete(),
     pushImage: ({ docker, taskId, params }) => {
       // imageName format is REPO:TAG, in API calls these need to be passed as { repo: , tag: }
       const localImageName = [params.account, taskId].join(':')
       const remoteImageName = [[config.google.docker_registry, config.google.project, params.account].join('/'), taskId].join(':')
       const remoteImageAPIName = { repo: [config.google.docker_registry, config.google.project, params.account].join('/'), tag: taskId }
-      logger.info('Going to push', remoteImageName)
       let dockerImage = docker.getImage(localImageName)
       return dockerImage.tag(remoteImageAPIName)
         .then(() => getGAuthToken())
@@ -136,25 +106,16 @@ module.exports = ({ config, gce, gAuth }) => {
                   if (err) {
                     reject(err)
                   } else {
-                    resolve()
+                    resolve(remoteImageName)
                   }
                 }
                 docker.modem.followProgress(stream, onFinished)
               }
             })
           })
-          .then(() => {
-            logger.info('Succesfully pushed', remoteImageName)
-            return remoteImageName
-          })
-        })
-        .catch(err => {
-          logger.error('Unable to push image', err)
-          return Promise.reject(err)
         })
     },
     pullImage: ({ docker, image }) => {
-      logger.info('Going to pull', image)
       return getGAuthToken().then(token => {
         const dockerAuth = {
           username: 'oauth2accesstoken',
@@ -170,21 +131,13 @@ module.exports = ({ config, gce, gAuth }) => {
                 if (err) {
                   reject(err)
                 } else {
-                  resolve()
+                  resolve(image)
                 }
               }
               docker.modem.followProgress(stream, onFinished)
             }
           })
         })
-        .then(() => {
-          logger.info('Succesfully pulled', image)
-          return image
-        })
-      })
-      .catch(err => {
-        logger.error('Unable to pull image', err)
-        throw err
       })
     }
   }
