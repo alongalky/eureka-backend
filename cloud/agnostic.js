@@ -55,9 +55,7 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
           logger.info('Going to pull', imageLocator)
           return persevere(() => controller.pullImage({ docker, image: imageLocator }), Array(6).fill(moment.duration(5, 'seconds')))
             .then(() => logger.info('Successfully pulled %s on %s', imageLocator, vm.ip))
-            .then(() => {
-              return persevereRunImagePromisified({ docker, image: imageLocator, command: params.command, opts: containerBindsPerAccount(params.account), delays: [moment.duration(5, 'seconds')] })
-            })
+            .then(() => persevereRunImagePromisified({ docker, image: imageLocator, command: params.command, opts: containerBindsPerAccount(params.account), delays: [moment.duration(5, 'seconds')] }))
             .then(container => logger.info('Container %s running for task %s', container.id, taskId))
             .then(() => database.tasks.changeTaskStatusRunning(taskId))
             .then(() => logger.info('Task %s running', taskId))
