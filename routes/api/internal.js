@@ -28,6 +28,7 @@ module.exports = ({ database, config, cloud }) => {
   const buildRunnerScript = (vmId, tags) => {
     const account = tags.find(tag => tag.startsWith('account-')).substr('account-'.length)
     const taskName = tags.find(tag => tag.startsWith('taskname-')).substr('taskname-'.length)
+    const taskId = tags.find(tag => tag.startsWith('task-')).substr('task-'.length)
     return cloud.getBucketForAccount(account)
       .then(bucket =>
         `
@@ -42,7 +43,9 @@ module.exports = ({ database, config, cloud }) => {
               sleep 1
             fi
           done
-          docker logs -t -f $container &> $logdir/logs-${taskName} &
+          docker logs -t -f $container &> $logdir/logs-${taskName}; \
+          sync; \
+          curl -X PUT -H 'Content-Type: application/json' -d '{"status":"done"}' ${config.eureka_endpoint}/api/_internal/tasks/${taskId} &
         `
       )
   }
