@@ -107,6 +107,57 @@ module.exports = ({ database, cloud }) => {
           logger.error(err)
           res.status(500).send('Failed to get tasks')
         })
+      }),
+    killTask: (req, res) => {
+      req.checkBody('task_name', 'Expected name between 1 to 60 characters').notEmpty().isLength({min: 1, max: 60})
+      return req.getValidationResult().then(result => {
+        if (!result.isEmpty()) {
+          res.status(422).send('There have been validation errors: ' + util.inspect(result.array()))
+          return
+        }
+
+        database.tasks.getTasks({
+          account: req.params.account_id
+        }).then(allTasks => {
+          const matchingTasks = allTasks.filter(task => task.name.includes(req.body.task_name))
+
+          if (matchingTasks.length === 0) {
+            const err = new Error()
+            err.type = 'task_name_unexistent'
+            throw err
+          }
+          if (matchingTasks.length > 1) {
+            const err = new Error()
+            err.type = 'task_name_ambiguos'
+            throw err
+          }
+          if (matchingTasks[0].status !== 'Running' && matchingTasks[0].status !== 'Initializing') {
+            const err = new Error()
+            err.type = 'task_name_notrunning'
+            throw err
+          }
+
+          const taskId = matchingTasks[0].task_id
+          return cloud.terminateTask(taskId)
+            .then(() => database.tasks.changeTaskStatusKilled(taskId))
+            .then(() => {
+              logger.info('Killing VM for task', taskId)
+              res.status(201).send({ message: 'Task killed successfully' })
+            })
+        })
+        .catch(err => {
+          if (err.type === 'task_name_unexistent') {
+            res.status(404).send('Task not found')
+          } else if (err.type === 'task_name_ambiguos') {
+            res.status(400).send('Task name matches more than one task')
+          } else if (err.type === 'task_name_notrunning') {
+            res.status(400).send('Task name matches a task that cannot be killed')
+          } else {
+            logger.error(err)
+            res.status(500).send('Failed to modify task')
+          }
+        })
       })
+    }
   }
 }
