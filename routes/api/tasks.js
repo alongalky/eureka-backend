@@ -123,12 +123,12 @@ module.exports = ({ database, cloud }) => {
 
           if (matchingTasks.length === 0) {
             const err = new Error()
-            err.type = 'task_name_unexistent'
+            err.type = 'task_name_non_existent'
             throw err
           }
           if (matchingTasks.length > 1) {
             const err = new Error()
-            err.type = 'task_name_ambiguos'
+            err.type = 'task_name_ambiguous'
             throw err
           }
           if (matchingTasks[0].status !== 'Running' && matchingTasks[0].status !== 'Initializing') {
@@ -138,17 +138,15 @@ module.exports = ({ database, cloud }) => {
           }
 
           const taskId = matchingTasks[0].task_id
+          logger.info('Killing VM for task', taskId)
           return cloud.terminateTask(taskId)
             .then(() => database.tasks.changeTaskStatusKilled(taskId))
-            .then(() => {
-              logger.info('Killing VM for task', taskId)
-              res.status(201).send({ message: 'Task killed successfully' })
-            })
+            .then(() => res.status(201).send({ message: 'Task killed successfully' }))
         })
         .catch(err => {
-          if (err.type === 'task_name_unexistent') {
+          if (err.type === 'task_name_non_existent') {
             res.status(404).send('Task not found')
-          } else if (err.type === 'task_name_ambiguos') {
+          } else if (err.type === 'task_name_ambiguous') {
             res.status(400).send('Task name matches more than one task')
           } else if (err.type === 'task_name_notrunning') {
             res.status(400).send('Task name matches a task that cannot be killed')

@@ -678,10 +678,7 @@ describe('API', () => {
         supertest(app)
           .put('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
           .send({ task_name: 'silly-m' })
-          .expect(500)
-          .end((err, res) => {
-            done(err)
-          })
+          .expect(500, done)
       })
     })
     describe('Internal', () => {
