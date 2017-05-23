@@ -5,7 +5,7 @@ const getTasks = ({account}) => {
   // This query rounds the duration up to the nearest minute when calculating cost,
   // but returns the duration in seconds.
   const query = `
-    SELECT tasks.name, tasks.command, tasks.status, machines.name AS machine_name,
+    SELECT tasks.task_id, tasks.name, tasks.command, tasks.status, machines.name AS machine_name,
       tasks.tier_id as tier_id, tiers.name as tier, timestamp_initializing,
       timestamp_done, tiers.price_per_hour_in_cent, accounts.spending_quota
     FROM accounts
@@ -53,7 +53,7 @@ const changeTaskStatusError = taskId => {
 
 const changeTaskStatusRunning = taskId => {
   const query =
-    'UPDATE tasks SET status = "Running", timestamp_running = ? WHERE task_id = ?'
+    'UPDATE tasks SET status = "Running", timestamp_running = ? WHERE task_id = ? AND status <> "Killed"'
 
   return connection().query(query, [new Date(), taskId])
 }
@@ -72,11 +72,19 @@ const changeTaskStatusDone = taskId => {
   return connection().query(query, [new Date(), taskId])
 }
 
+const changeTaskStatusKilled = taskId => {
+  const query =
+    'UPDATE tasks SET status = "Killed", timestamp_done = ? WHERE task_id = ?'
+
+  return connection().query(query, [new Date(), taskId])
+}
+
 module.exports = {
   getTasks,
   addTask,
   changeTaskStatusInitializing,
   changeTaskStatusRunning,
   changeTaskStatusDone,
-  changeTaskStatusError
+  changeTaskStatusError,
+  changeTaskStatusKilled
 }

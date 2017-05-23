@@ -22,7 +22,8 @@ describe('API', () => {
       addTask: sinon.stub(),
       getTasks: sinon.stub(),
       changeTaskStatusError: sinon.stub(),
-      changeTaskStatusDone: sinon.stub()
+      changeTaskStatusDone: sinon.stub(),
+      changeTaskStatusKilled: sinon.stub()
     },
     accounts: {
       getAccount: sinon.stub(),
@@ -85,6 +86,9 @@ describe('API', () => {
     database.machines.getMachines.reset()
     database.tasks.getTasks.reset()
     database.tasks.addTask.reset()
+    database.tasks.changeTaskStatusDone.reset()
+    database.tasks.changeTaskStatusError.reset()
+    database.tasks.changeTaskStatusKilled.reset()
     database.accounts.getAccount.reset()
     database.accounts.getAccountSecretKey.reset()
     database.accounts.getAccounts.reset()
@@ -92,6 +96,7 @@ describe('API', () => {
     cloud.resolveInstanceExternalIp.reset()
     cloud.getInstanceTags.reset()
     cloud.getBucketForAccount.reset()
+    cloud.terminateTask.reset()
     succeedAuthentication = true
   })
 
@@ -521,15 +526,165 @@ describe('API', () => {
           })
       })
     })
+    describe('PUT /tasks', () => {
+      const tasks = [
+        {
+          task_id: 1,
+          name: 'silly-marcus',
+          status: 'Running'
+        },
+        {
+          task_id: 2,
+          name: 'silly-cindy',
+          status: 'Initializing'
+        },
+        {
+          task_id: 3,
+          name: 'drunk-pony',
+          status: 'Done'
+        }
+      ]
+      beforeEach(() => {
+        database.tasks.getTasks.resolves(tasks)
+      })
+
+      it('returns 201 on happy flow', done => {
+        cloud.terminateTask.resolves()
+        database.tasks.changeTaskStatusKilled.resolves()
+
+        supertest(app)
+          .put('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .send({ task_name: 'silly-marcus' })
+          .expect(201)
+          .end((err, res) => {
+            sinon.assert.calledOnce(cloud.terminateTask)
+            sinon.assert.calledWith(cloud.terminateTask, 1)
+
+            done(err)
+          })
+      })
+      it('returns 201 on happy flow and partial match', done => {
+        cloud.terminateTask.resolves()
+        database.tasks.changeTaskStatusKilled.resolves()
+
+        supertest(app)
+          .put('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .send({ task_name: 'silly-m' })
+          .expect(201)
+          .end((err, res) => {
+            sinon.assert.calledOnce(cloud.terminateTask)
+            sinon.assert.calledWith(cloud.terminateTask, 1)
+
+            done(err)
+          })
+      })
+      it('returns 422 when task_name is empty', done => {
+        supertest(app)
+          .put('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .send({})
+          .expect(422)
+          .end((err, res) => {
+            sinon.assert.notCalled(cloud.terminateTask)
+            sinon.assert.notCalled(database.tasks.changeTaskStatusKilled)
+
+            done(err)
+          })
+      })
+      it('returns 422 when task_name is too long', done => {
+        supertest(app)
+          .put('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .send({ task_name: 'a'.repeat(61) })
+          .expect(422)
+          .end((err, res) => {
+            sinon.assert.notCalled(cloud.terminateTask)
+            sinon.assert.notCalled(database.tasks.changeTaskStatusKilled)
+
+            done(err)
+          })
+      })
+      it('returns 404 when task_name does not match any task', done => {
+        supertest(app)
+          .put('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .send({ task_name: 'madeup-task' })
+          .expect(404)
+          .end((err, res) => {
+            sinon.assert.notCalled(cloud.terminateTask)
+            sinon.assert.notCalled(database.tasks.changeTaskStatusKilled)
+
+            done(err)
+          })
+      })
+      it('returns 400 if task_name matches more than one task', done => {
+        cloud.terminateTask.resolves()
+        database.tasks.changeTaskStatusKilled.resolves()
+
+        supertest(app)
+          .put('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .send({ task_name: 'silly' })
+          .expect(400)
+          .end((err, res) => {
+            sinon.assert.notCalled(cloud.terminateTask)
+            sinon.assert.notCalled(database.tasks.changeTaskStatusKilled)
+
+            done(err)
+          })
+      })
+      it('returns 400 if task_name matches a task in an unkillable state', done => {
+        cloud.terminateTask.resolves()
+        database.tasks.changeTaskStatusKilled.resolves()
+
+        supertest(app)
+          .put('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .send({ task_name: 'drunk' })
+          .expect(400)
+          .end((err, res) => {
+            sinon.assert.notCalled(cloud.terminateTask)
+            sinon.assert.notCalled(database.tasks.changeTaskStatusKilled)
+
+            done(err)
+          })
+      })
+      it('returns 500 when getTasks fails', done => {
+        database.tasks.getTasks.rejects(new Error('Crazy API error'))
+
+        supertest(app)
+          .put('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .send({ task_name: 'drunk' })
+          .expect(500)
+          .end((err, res) => {
+            sinon.assert.notCalled(cloud.terminateTask)
+            sinon.assert.notCalled(database.tasks.changeTaskStatusKilled)
+
+            done(err)
+          })
+      })
+      it('returns 500 when terminateTask fails', done => {
+        cloud.terminateTask.rejects(new Error('Crazy API error'))
+
+        supertest(app)
+          .put('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .send({ task_name: 'silly-marcus' })
+          .expect(500)
+          .end((err, res) => {
+            sinon.assert.notCalled(database.tasks.changeTaskStatusKilled)
+
+            done(err)
+          })
+      })
+      it('returns 500 when changeTaskStatusKilled fails', done => {
+        cloud.terminateTask.resolves()
+        database.tasks.changeTaskStatusKilled.rejects(new Error('Crazy database error'))
+
+        supertest(app)
+          .put('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+          .send({ task_name: 'silly-m' })
+          .expect(500, done)
+      })
+    })
     describe('Internal', () => {
       const goodTaskId = '47bd7765-2378-45f9-8588-f2d55c4208a7'
       const goodParam = { status: 'done' }
 
-      beforeEach(() => {
-        cloud.terminateTask.reset()
-        database.tasks.changeTaskStatusDone.reset()
-        database.tasks.changeTaskStatusError.reset()
-      })
       describe('PUT /_internal/tasks/:task_id/done', () => {
         it('returns 201 on happy flow', done => {
           cloud.terminateTask.resolves()
