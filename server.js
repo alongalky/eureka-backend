@@ -26,6 +26,7 @@ const gAuth = require('google-auto-auth')()
 const googleController = require('./cloud/google/controller')({ config, gce, gAuth })
 const persevere = require('./util/persevere')
 const passport = require('passport')
+const cors = require('cors')
 
 const controller = [googleController].find(c => c.controls === config.cloud_provider)
 if (!controller) {
@@ -41,6 +42,8 @@ const apiRouter = require('./routes/api')({
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }))
+// TODO: restrict cors access to Eureka domain
+app.use(cors())
 app.use(bodyParser.json())
 app.use(expressValidator({
   customValidators: {
