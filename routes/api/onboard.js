@@ -35,7 +35,7 @@ module.exports = ({ database, config }) => ({
         database.accounts.createAccount(account)
           .then(() => {
             const machineId = uuidv4()
-            const privkeyPath = '/ugly_privkey'
+            const privkeyPath = path.join(__dirname, '../../ugly_privkey')
             const command = `
               export account=${account.account_id}
               export PROJECT_NAME=${config.google.project}
@@ -57,7 +57,8 @@ module.exports = ({ database, config }) => ({
               export machinas_ip=$(gcloud compute instances list --project $PROJECT_NAME | grep machinas-$PROJECT_NAME | awk '{print $5}')
               container_port=$(
                 eval \`ssh-agent -s\` >/dev/null
-                ssh-add ${path.join(__dirname, '../../ugly_privkey')} >/dev/null
+                chmod 600 ${privkeyPath}
+                ssh-add ${privkeyPath} >/dev/null
                 ssh -o StrictHostKeyChecking=no -A uglydemo@$machinas_ip "
                   (
                     sudo mkdir /mnt/eureka-account-$account
