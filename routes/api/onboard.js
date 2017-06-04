@@ -1,4 +1,5 @@
 const util = require('util')
+const path = require('path')
 const logger = require('../../logger/logger')()
 const uuidv4 = require('uuid').v4
 const exec = require('child_process').exec
@@ -56,7 +57,7 @@ module.exports = ({ database, config }) => ({
               export machinas_ip=$(gcloud compute instances list --project $PROJECT_NAME | grep machinas-$PROJECT_NAME | awk '{print $5}')
               container_port=$(
                 eval \`ssh-agent -s\` >/dev/null
-                ssh-add ${privkeyPath} >/dev/null
+                ssh-add ${path.join(__dirname, '../../ugly_privkey')} >/dev/null
                 ssh -o StrictHostKeyChecking=no -A uglydemo@$machinas_ip "
                   (
                     sudo mkdir /mnt/eureka-account-$account
