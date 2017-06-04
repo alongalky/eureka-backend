@@ -67,7 +67,7 @@ module.exports = ({ database, config }) => ({
                     cd utility-scripts/dockerfiles/numpy
                     git pull
                     sudo docker build . -t numpy-ssh
-                    sudo docker run -i -t -d -p 3000-4000:22 -v /mnt/eureka-account-$account/:/keep -e 'PUBLIC_KEY=' numpy-ssh
+                    sudo docker run -i -t -d -p 3000-4000:22 -v /mnt/eureka-account-$account/:/keep -e 'PUBLIC_KEY=' demoimage
                   ) &>/dev/null
                   container=\\$(sudo docker ps | sed -n '2p' | awk '{print \\$1}')
                   port=\\$(sudo docker port \\$container | sed -rn 's/.+:(.+)\\$/\\1/p')
