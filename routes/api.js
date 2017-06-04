@@ -33,7 +33,6 @@ module.exports = ({ database, cloud, config, authStrategy }) => {
   accountsRouter.get('/tasks', tasksApi.getTasks)
   accountsRouter.put('/tasks', tasksApi.killTask)
   accountsRouter.get('/machines', machinesApi.getMachines)
-  accountsRouter.post('/machines', onboardApi.onboard)
 
   return apiRouter
 }
