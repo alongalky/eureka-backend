@@ -4,10 +4,9 @@ module.exports = {
   createMachine: machine => {
     const query =
       'INSERT INTO `machines` ' +
-      '(`machine_id`, `name`, `account_id`, `vm_id`, `container_id`, `ssh_port`) ' +
-      'VALUES (?, ?, ?, ?, ?, ?)'
+      'SET ?'
 
-    return connection().query(query, Object.values(machine))
+    return connection().query(query, machine)
       .then(([rows, fields]) => rows[0])
   },
   getMachines: accountId => {

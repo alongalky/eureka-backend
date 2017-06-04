@@ -4,10 +4,9 @@ module.exports = {
   createAccount: account => {
     const query =
       'INSERT INTO `accounts` ' +
-      '(`account_id`, `name`, `key`, `secret`, `first_name`, `last_name`, `email`, `spending_quota`, `vm_quota`, `public_key`) ' +
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'SET ?'
 
-    return connection().query(query, Object.values(account))
+    return connection().query(query, account)
       .then(([rows, fields]) => rows[0])
   },
   getAccount: accountId => {

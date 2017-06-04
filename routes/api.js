@@ -29,11 +29,11 @@ module.exports = ({ database, cloud, config, authStrategy }) => {
     next()
   })
 
-  accountsRouter.post('/', onboardApi.onboard)
   accountsRouter.post('/tasks', tasksApi.addTask)
   accountsRouter.get('/tasks', tasksApi.getTasks)
   accountsRouter.put('/tasks', tasksApi.killTask)
   accountsRouter.get('/machines', machinesApi.getMachines)
+  accountsRouter.post('/machines', onboardApi.onboard)
 
   return apiRouter
 }
