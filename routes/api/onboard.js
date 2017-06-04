@@ -99,8 +99,7 @@ module.exports = ({ database, config }) => ({
                     res.json({
                       success: true,
                       message: 'Account created and onboarded succesfully',
-                      account,
-                      machine
+                      account
                     })
                   })
               })
