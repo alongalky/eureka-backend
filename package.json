@@ -25,6 +25,7 @@
     "body-parser": "^1.17.1",
     "bunyan": "^1.8.10",
     "child_process": "^1.0.2",
+    "cors": "^2.8.3",
     "deep-extend": "^0.4.1",
     "dockerode": "^2.4.3",
     "express": "^4.15.2",
