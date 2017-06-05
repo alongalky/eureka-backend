@@ -55,8 +55,8 @@ module.exports = ({ database, config }) => ({
               ) &>/dev/null
 
               export machinas_ip=$(gcloud compute instances list --project $PROJECT_NAME | grep machinas-$PROJECT_NAME | awk '{print $5}')
-              ssh uglydemo@$machinas_ip "mkdir -p $(dirname $USERCONFIGFILE)" &>/dev/null
-              scp $USERCONFIGFILE uglydemo@$machinas_ip:$USERCONFIGFILE &>/dev/null
+              ssh -q uglydemo@$machinas_ip "mkdir -p $(dirname $USERCONFIGFILE)"
+              scp -q $USERCONFIGFILE uglydemo@$machinas_ip:$USERCONFIGFILE
               container_port=$(
                 eval \`ssh-agent -s\` >/dev/null
                 chmod 600 ${privkeyPath}
