@@ -39,22 +39,24 @@ module.exports = ({ database, config }) => ({
             const command = `
               export account=${account.account_id}
               export PROJECT_NAME=${config.google.project}
+              export USERCONFIGFILE=/tmp/$account/eureka.config.yaml
               (
                 cd /tmp
                 mkdir $account
                 rm -f $account/eureka_key*
                 ssh-keygen -f $account/eureka_key -N "" -q
-                userconfigfile=$account/eureka.config.yaml
-                echo "key: ${account.key}" > $userconfigfile
-                echo "secret: ${account.secret}" >> $userconfigfile
-                echo "account: ${account.account_id}" >> $userconfigfile
-                echo "endpoint: https://$PROJECT_NAME.appspot.com" >> $userconfigfile
+                echo "key: ${account.key}" > $USERCONFIGFILE
+                echo "secret: ${account.secret}" >> $USERCONFIGFILE
+                echo "account: ${account.account_id}" >> $USERCONFIGFILE
+                echo "endpoint: ${config.eureka_endpoint}" >> $USERCONFIGFILE
                 gsutil mb -c regional -p $PROJECT_NAME -l us-east1 gs://eureka-account-$account/
                 gsutil cp $account/eureka_key gs://$PROJECT_NAME-privatekeys/$account/
                 gsutil cp $account/eureka.config.yaml gs://$PROJECT_NAME-configfiles/$account/
               ) &>/dev/null
 
               export machinas_ip=$(gcloud compute instances list --project $PROJECT_NAME | grep machinas-$PROJECT_NAME | awk '{print $5}')
+              ssh uglydemo@$machinas_ip "mkdir -p $(dirname $USERCONFIGFILE)" &>/dev/null
+              scp $USERCONFIGFILE uglydemo@$machinas_ip:$USERCONFIGFILE &>/dev/null
               container_port=$(
                 eval \`ssh-agent -s\` >/dev/null
                 chmod 600 ${privkeyPath}
@@ -66,7 +68,7 @@ module.exports = ({ database, config }) => ({
                     git clone git@bitbucket.org:alongalky/utility-scripts.git
                     cd utility-scripts/dockerfiles/demoimage
                     git pull
-                    sudo docker build . -t demoimage
+                    sudo bash -c "export USERCONFIGFILE=$USERCONFIGFILE; docker build . -t demoimage"
                     sudo docker run -i -t -d -p 3000-4000:22 -v /mnt/eureka-account-$account/:/keep -e 'PUBLIC_KEY=' demoimage
                   ) &>/dev/null
                   container=\\$(sudo docker ps | sed -n '2p' | awk '{print \\$1}')
