@@ -64,9 +64,9 @@ module.exports = ({ database, config }) => ({
                     sudo mkdir /mnt/eureka-account-$account
                     sudo gcsfuse eureka-account-$account /mnt/eureka-account-$account
                     git clone git@bitbucket.org:alongalky/utility-scripts.git
-                    cd utility-scripts/dockerfiles/numpy
+                    cd utility-scripts/dockerfiles/demoimage
                     git pull
-                    sudo docker build . -t numpy-ssh
+                    sudo docker build . -t demoimage
                     sudo docker run -i -t -d -p 3000-4000:22 -v /mnt/eureka-account-$account/:/keep -e 'PUBLIC_KEY=' demoimage
                   ) &>/dev/null
                   container=\\$(sudo docker ps | sed -n '2p' | awk '{print \\$1}')
