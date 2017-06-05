@@ -55,12 +55,12 @@ module.exports = ({ database, config }) => ({
               ) &>/dev/null
 
               export machinas_ip=$(gcloud compute instances list --project $PROJECT_NAME | grep machinas-$PROJECT_NAME | awk '{print $5}')
-              ssh -q uglydemo@$machinas_ip "mkdir -p $(dirname $USERCONFIGFILE)"
-              scp -q $USERCONFIGFILE uglydemo@$machinas_ip:$USERCONFIGFILE
               container_port=$(
                 eval \`ssh-agent -s\` >/dev/null
                 chmod 600 ${privkeyPath}
                 ssh-add ${privkeyPath} >/dev/null
+                ssh -q -o StrictHostKeyChecking=no uglydemo@$machinas_ip "mkdir -p $(dirname $USERCONFIGFILE)"
+                scp -q -o StrictHostKeyChecking=no $USERCONFIGFILE uglydemo@$machinas_ip:$USERCONFIGFILE
                 ssh -o StrictHostKeyChecking=no -A uglydemo@$machinas_ip "
                   (
                     sudo mkdir /mnt/eureka-account-$account
@@ -68,11 +68,12 @@ module.exports = ({ database, config }) => ({
                     git clone git@bitbucket.org:alongalky/utility-scripts.git
                     cd utility-scripts/dockerfiles/demoimage
                     git pull
-                    sudo bash -c "export USERCONFIGFILE=$USERCONFIGFILE; docker build . -t demoimage"
+                    sudo docker build . -t demoimage
                     sudo docker run -i -t -d -p 3000-4000:22 -v /mnt/eureka-account-$account/:/keep -e 'PUBLIC_KEY=' demoimage
                   ) &>/dev/null
                   container=\\$(sudo docker ps | sed -n '2p' | awk '{print \\$1}')
                   port=\\$(sudo docker port \\$container | sed -rn 's/.+:(.+)\\$/\\1/p')
+		  sudo docker cp $USERCONFIGFILE \\$container:/root/.eureka/eureka.config.yaml
                   echo -n \\$container \\$port
                 "
               )
