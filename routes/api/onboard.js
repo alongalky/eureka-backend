@@ -73,7 +73,7 @@ module.exports = ({ database, config }) => ({
                   ) &>/dev/null
                   container=\\$(sudo docker ps | sed -n '2p' | awk '{print \\$1}')
                   port=\\$(sudo docker port \\$container | sed -rn 's/.+:(.+)\\$/\\1/p')
-		  sudo docker cp $USERCONFIGFILE \\$container:/root/.eureka/eureka.config.yaml
+                  sudo docker cp $USERCONFIGFILE \\$container:/root/.eureka/eureka.config.yaml
                   echo -n \\$container \\$port
                 "
               )
