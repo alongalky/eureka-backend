@@ -28,6 +28,17 @@ const persevere = require('./util/persevere')
 const passport = require('passport')
 const cors = require('cors')
 
+const https = require('https');
+const privateKey  = fs.readFileSync('/etc/letsencrypt/live/devapidemo.eureka.guru/privkey.pem', 'utf8');
+const certificate = fs.readFileSync('/etc/letsencrypt/live/devapidemo.eureka.guru/fullchain.pem', 'utf8');
+
+const credentials = {key: privateKey, cert: certificate};
+
+// your express configuration here
+
+const httpsServer = https.createServer(credentials, app);
+
+
 const controller = [googleController].find(c => c.controls === config.cloud_provider)
 if (!controller) {
   throw new Error(`Could not find a cloud controller to handle ${config.cloud_provider}`)
@@ -57,7 +68,7 @@ app.use(morgan('tiny', {
   skip: (req, res) => req.url.endsWith('/health')
 }))
 
-var port = process.env.PORT || 8080
+var port = process.env.PORT || 443
 
 // Filter requests that don't start with /api from analytics
 app.use('/api', (req, res, next) => {
@@ -67,5 +78,5 @@ app.use('/api', (req, res, next) => {
 })
 app.use('/api', apiRouter)
 
-app.listen(port)
+httpsServer.listen(port);
 logger.info('Magic happens on port ' + port)

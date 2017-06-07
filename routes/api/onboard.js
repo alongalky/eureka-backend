@@ -54,7 +54,7 @@ module.exports = ({ database, config }) => ({
                 gsutil cp $account/eureka.config.yaml gs://$PROJECT_NAME-configfiles/$account/
               ) &>/dev/null
 
-              export machinas_ip=$(gcloud compute instances list --project $PROJECT_NAME | grep machinas-$PROJECT_NAME | awk '{print $5}')
+              export machinas_ip=$(gcloud compute instances list --project $PROJECT_NAME | grep machinas-$PROJECT_NAME | awk '{print $8}')
               container_port=$(
                 eval \`ssh-agent -s\` >/dev/null
                 chmod 600 ${privkeyPath}
