@@ -28,8 +28,8 @@ module.exports = ({ database, config }) => ({
           first_name: req.body.first_name,
           last_name: req.body.last_name,
           email: req.body.email,
-          spending_quota: 100.0,
-          vm_quota: 10,
+          spending_quota: 20.0,
+          vm_quota: 3,
           public_key: 'ssh-rsa'
         }
         database.accounts.createAccount(account)

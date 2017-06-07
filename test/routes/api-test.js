@@ -252,6 +252,77 @@ describe('API', () => {
               done(err)
             })
         })
+        it('returns 400 when account has too many VMs', done => {
+          const endTime = moment()
+          const startTime = endTime.clone().subtract(5, 'minutes')
+          const oneTask = {
+            status: 'Running',
+            vm_quota: 3,
+            spending_quota: 10,
+            price_per_hour_in_cent: 100,
+            timestamp_initializing: startTime.toISOString(),
+            timestamp_done: endTime.toISOString()
+          }
+          database.tasks.getTasks.resolves(Array(4).fill(oneTask))
+
+          supertest(app)
+            .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+            .send(goodParams)
+            .expect(400)
+            .end((err, res) => {
+              sinon.assert.notCalled(database.tasks.addTask)
+              expect(res.text).to.equal('VM quota exceeded')
+
+              done(err)
+            })
+        })
+        it('returns 400 when account has exactly the maximum number of VMs', done => {
+          const endTime = moment()
+          const startTime = endTime.clone().subtract(5, 'minutes')
+          const oneTask = {
+            status: 'Running',
+            vm_quota: 3,
+            spending_quota: 10,
+            price_per_hour_in_cent: 100,
+            timestamp_initializing: startTime.toISOString(),
+            timestamp_done: endTime.toISOString()
+          }
+          database.tasks.getTasks.resolves(Array(3).fill(oneTask))
+
+          supertest(app)
+            .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+            .send(goodParams)
+            .expect(400)
+            .end((err, res) => {
+              sinon.assert.notCalled(database.tasks.addTask)
+              expect(res.text).to.equal('VM quota exceeded')
+
+              done(err)
+            })
+        })
+        it('returns 201 when account has less than the maximum number of VMs', done => {
+          const endTime = moment()
+          const startTime = endTime.clone().subtract(5, 'minutes')
+          const oneTask = {
+            status: 'Running',
+            vm_quota: 3,
+            spending_quota: 10,
+            price_per_hour_in_cent: 100,
+            timestamp_initializing: startTime.toISOString(),
+            timestamp_done: endTime.toISOString()
+          }
+          database.tasks.getTasks.resolves(Array(2).fill(oneTask))
+
+          supertest(app)
+            .post('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks')
+            .send(goodParams)
+            .expect(201)
+            .end((err, res) => {
+              sinon.assert.calledOnce(database.tasks.addTask)
+
+              done(err)
+            })
+        })
         it('returns 401 when authentication fails', done => {
           succeedAuthentication = false
 

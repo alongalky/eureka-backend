@@ -29,7 +29,7 @@ module.exports = ({ database, cloud }) => {
                 return res.status(422).send('There have been validation errors: ' + util.inspect(result.array()))
               }
 
-              return database.tasks.getTasks(req.params.account_id)
+              return database.tasks.getTasks({ account: req.params.account_id })
                 .then(tasks => {
                   if (tasks.length === 0) {
                     return
@@ -46,6 +46,21 @@ module.exports = ({ database, cloud }) => {
 
                     const err = new Error(`Spending quota exceeded`)
                     err.type = 'spending_quota_exceeded'
+                    throw err
+                  }
+
+                  const currentlyRunningVmCount = tasks
+                    .filter(t => t.status === 'Running' || t.status === 'Initializing')
+                    .length
+
+                  const accountVmQuota = tasks[0].vm_quota
+
+                  if (currentlyRunningVmCount >= accountVmQuota) {
+                    logger.info(`Account ${req.params.account_id} has exceeded its VM quota. ` +
+                      `Currently running VMs: ${currentlyRunningVmCount}, Quota: ${accountVmQuota}`)
+
+                    const err = new Error(`VM quota exceeded`)
+                    err.type = 'vm_quota_exceeded'
                     throw err
                   }
                 })
@@ -73,6 +88,8 @@ module.exports = ({ database, cloud }) => {
             res.status(404).send('Machine not found')
           } else if (err.type === 'spending_quota_exceeded') {
             res.status(400).send('Spending quota exceeded')
+          } else if (err.type === 'vm_quota_exceeded') {
+            res.status(400).send('VM quota exceeded')
           } else {
             logger.error(err)
             res.status(500).send('Failed to add task')
