@@ -64,6 +64,7 @@ module.exports = ({ database, config }) => ({
                 ssh -o StrictHostKeyChecking=no -A uglydemo@$machinas_ip "
                   (
                     sudo mkdir /mnt/eureka-account-$account
+                    while ! sudo gsutil ls | grep $account; do sleep 1; done
                     sudo gcsfuse eureka-account-$account /mnt/eureka-account-$account
                     git clone git@bitbucket.org:alongalky/utility-scripts.git
                     cd utility-scripts/dockerfiles/demoimage
