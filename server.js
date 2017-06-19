@@ -72,7 +72,12 @@ var port = process.env.PORT || 443
 
 // Filter requests that don't start with /api from analytics
 app.use('/api', (req, res, next) => {
-  appInsights.client.trackRequest(req, res)
+  const isGetTasksRequest = req.method === 'GET' && req.url.endsWith('/tasks')
+
+  // Don't send telemetry for GET /tasks to avoid flooding AppInsights
+  if (!isGetTasksRequest) {
+    appInsights.client.trackRequest(req, res)
+  }
 
   next()
 })
