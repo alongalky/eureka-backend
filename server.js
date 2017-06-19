@@ -27,17 +27,20 @@ const googleController = require('./cloud/google/controller')({ config, gce, gAu
 const persevere = require('./util/persevere')
 const passport = require('passport')
 const cors = require('cors')
+const https = require('https')
 
-const https = require('https');
-const privateKey  = fs.readFileSync('/etc/letsencrypt/live/devapidemo.eureka.guru/privkey.pem', 'utf8');
-const certificate = fs.readFileSync('/etc/letsencrypt/live/devapidemo.eureka.guru/fullchain.pem', 'utf8');
+let server
 
-const credentials = {key: privateKey, cert: certificate};
+if (config.ssl_enabled) {
+  const privateKey = fs.readFileSync(config.ssl_key, 'utf8')
+  const certificate = fs.readFileSync(config.ssl_certificate, 'utf8')
 
-// your express configuration here
+  const credentials = {key: privateKey, cert: certificate}
 
-const httpsServer = https.createServer(credentials, app);
-
+  server = https.createServer(credentials, app)
+} else {
+  server = app
+}
 
 const controller = [googleController].find(c => c.controls === config.cloud_provider)
 if (!controller) {
@@ -68,7 +71,7 @@ app.use(morgan('tiny', {
   skip: (req, res) => req.url.endsWith('/health')
 }))
 
-var port = process.env.PORT || 443
+var port = process.env.PORT || config.listen_port
 
 // Filter requests that don't start with /api from analytics
 app.use('/api', (req, res, next) => {
@@ -83,5 +86,5 @@ app.use('/api', (req, res, next) => {
 })
 app.use('/api', apiRouter)
 
-httpsServer.listen(port);
+server.listen(port)
 logger.info('Magic happens on port ' + port)
