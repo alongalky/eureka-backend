@@ -5,6 +5,10 @@ const instanceName = 'dotted-vim-164110:us-east1:eureka-dev'
 
 module.exports = {
   eureka_endpoint: 'https://devapidemo.eureka.guru',
+  listen_port: 443,
+  ssl_enabled: true,
+  ssl_certificate: '/etc/letsencrypt/live/devapidemo.eureka.guru/fullchain.pem',
+  ssl_key: '/etc/letsencrypt/live/devapidemo.eureka.guru/privkey.pem',
   google: {
     project: 'dotted-vim-164110',
     project_service_account: '760853174060-compute@developer.gserviceaccount.com',

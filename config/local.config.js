@@ -1,4 +1,6 @@
 module.exports = {
+  listen_port: 8080,
+  ssl_enabled: false,
   database: {
     connectionLimit: 10,
     host: 'localhost',
