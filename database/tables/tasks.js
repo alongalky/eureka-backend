@@ -46,7 +46,7 @@ const addTask = ({command, machineName, taskName, tierId, account}) => {
 
 const changeTaskStatusError = taskId => {
   const query =
-    'UPDATE tasks SET status = "Error", timestamp_done = ? WHERE task_id = ?'
+    'UPDATE tasks SET status = "Error", timestamp_done = ? WHERE task_id = ? AND status <> "Killed"'
 
   return connection().query(query, [new Date(), taskId])
 }
