@@ -68,6 +68,7 @@ module.exports = ({ database, cloud }) => {
                   const tierId = tiers.find(t => t.name === req.body.tier).tier_id
                   const params = {
                     command: req.body.command,
+                    workingDirectory: req.body.workingDirectory,
                     machineName: req.body.machineName,
                     taskName: req.body.taskName,
                     tierId,
