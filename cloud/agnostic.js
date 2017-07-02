@@ -16,14 +16,15 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
       .then(ip => {
         const docker = new Dockerode({ host: ip, port: config.docker_port })
         const container = docker.getContainer(machine.container_id)
-        logger.info('Committing container %s from %s', machine.container_id, machine.vm_id)
+        logger.info('Committing container for task %s container %s from %s', taskId, machine.container_id, machine.vm_id)
         return persevere(() => container.commit({ repo: params.account, tag: taskId }), [moment.duration(5, 'seconds')])
           .then(() => {
+            logger.info('Committed container for task', taskId)
             logger.info('Going to push image for task', taskId)
             return controller.pushImage({ docker, taskId, params })
           })
           .then(imageLocator => {
-            logger.info('Succesfully pushed', imageLocator)
+            logger.info('Succesfully pushed for task %s image %s', taskId, imageLocator)
             return imageLocator
           })
       })
@@ -52,11 +53,11 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
         ]))
         .then(([imageLocator, vm]) => {
           const docker = new Dockerode({ host: vm.ip, port: config.docker_port })
-          logger.info('Going to pull %s for task', imageLocator, taskId)
-          return persevere(() => controller.pullImage({ docker, image: imageLocator }), Array(6).fill(moment.duration(5, 'seconds')))
-            .then(() => logger.info('Successfully pulled %s on %s', imageLocator, vm.ip))
+          logger.info('Going to pull for task %s image %s', taskId, imageLocator)
+          return persevere(() => controller.pullImage({ docker, image: imageLocator }), Array(10).fill(moment.duration(5, 'seconds')))
+            .then(() => logger.info('Successfully pulled for task %s image %s on %s', taskId, imageLocator, vm.ip))
             .then(() => persevereRunImagePromisified({ docker, image: imageLocator, command: ((params.workingDirectory) ? `cd ${params.workingDirectory}; ` : '') + params.command, opts: containerBindsPerAccount(params.account), delays: [moment.duration(5, 'seconds')] }))
-            .then(container => logger.info('Container %s running for task %s', container.id, taskId))
+            .then(container => logger.info('Container for task %s container %s running', taskId, container.id))
             .then(() => database.tasks.changeTaskStatusRunning(taskId))
             .then(() => logger.info('Task %s running', taskId))
         })
@@ -67,7 +68,7 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
         })
         .catch(err => {
           // TODO: Alert
-          logger.error('Task %s deployment failed but status could not be updated', taskId, err)
+          logger.error('Deployment for task %s failed but status could not be updated', taskId, err)
         }),
 
     resolveInstanceExternalIp: vmId => controller.resolveInstanceExternalIp(vmId),

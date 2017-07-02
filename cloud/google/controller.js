@@ -4,6 +4,7 @@ module.exports = ({ config, gce, gAuth }) => {
     new Promise((resolve, reject) => {
       gAuth.getToken((err, token) => {
         if (err) {
+          err.message = 'getGAuthToken ' + err.message
           reject(err)
         } else {
           resolve(token)
@@ -100,10 +101,12 @@ module.exports = ({ config, gce, gAuth }) => {
           return new Promise((resolve, reject) => {
             dockerImage.push({ authconfig: dockerAuth }, (err, stream) => {
               if (err || !stream) {
+                err.message = 'pushImage ' + err.message
                 reject(err)
               } else {
                 const onFinished = err => {
                   if (err) {
+                    err.message = 'pushImage ' + err.message
                     reject(err)
                   } else {
                     resolve(remoteImageName)
@@ -125,10 +128,12 @@ module.exports = ({ config, gce, gAuth }) => {
         return new Promise((resolve, reject) => {
           docker.pull(image, { authconfig: dockerAuth }, (err, stream) => {
             if (err || !stream) {
+              err.message = 'pullImage ' + err.message
               reject(err)
             } else {
               const onFinished = err => {
                 if (err) {
+                  err.message = 'pullImage ' + err.message
                   reject(err)
                 } else {
                   resolve(image)
