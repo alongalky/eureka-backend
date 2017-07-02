@@ -7,7 +7,7 @@ const getTasks = ({account}) => {
   const query = `
     SELECT tasks.task_id, tasks.name, tasks.command, tasks.status, machines.name AS machine_name,
       tasks.tier_id as tier_id, tiers.name as tier, timestamp_initializing,
-      timestamp_done, tiers.price_per_hour_in_cent, accounts.spending_quota
+      timestamp_done, tiers.price_per_hour_in_cent, accounts.spending_quota, accounts.vm_quota
     FROM accounts
     INNER JOIN machines ON accounts.account_id = machines.account_id
     INNER JOIN tasks ON tasks.machine_id = machines.machine_id

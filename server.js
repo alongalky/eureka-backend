@@ -57,11 +57,16 @@ app.use(morgan('tiny', {
   skip: (req, res) => req.url.endsWith('/health')
 }))
 
-var port = process.env.PORT || 8080
+var port = process.env.PORT || config.listen_port
 
 // Filter requests that don't start with /api from analytics
 app.use('/api', (req, res, next) => {
-  appInsights.client.trackRequest(req, res)
+  const isGetTasksRequest = req.method === 'GET' && req.url.endsWith('/tasks')
+
+  // Don't send telemetry for GET /tasks to avoid flooding AppInsights
+  if (!isGetTasksRequest) {
+    appInsights.client.trackRequest(req, res)
+  }
 
   next()
 })

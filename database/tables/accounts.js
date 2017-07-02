@@ -1,22 +1,30 @@
 const connection = require('../connection')
 
 module.exports = {
-  getAccount: account => {
+  createAccount: account => {
     const query =
-      'SELECT account_id, spending_quota ' +
+      'INSERT INTO `accounts` ' +
+      'SET ?'
+
+    return connection().query(query, account)
+      .then(([rows, fields]) => rows[0])
+  },
+  getAccount: accountId => {
+    const query =
+      'SELECT * ' +
       'FROM accounts ' +
       'WHERE accounts.account_id = ?'
 
-    return connection().query(query, [account])
+    return connection().query(query, [accountId])
       .then(([rows, fields]) => rows[0])
   },
-  getAccountSecretKey: account => {
+  getAccountSecretKey: accountId => {
     const query =
       'SELECT accounts.account_id, accounts.key, accounts.secret ' +
       'FROM accounts ' +
       'WHERE accounts.account_id = ?'
 
-    return connection().query(query, [account])
+    return connection().query(query, [accountId])
       .then(([rows, fields]) => rows.length > 0 ? rows[0] : null)
   },
   getAccounts: vmId => {
