@@ -9,6 +9,7 @@ VALUES
 ('165a107c-0a57-4cad-8451-23d209e22c58',42.524,'n1-standard-8',30,8,120,0,0,'n1-standard-8'),
 ('28d87bb8-ef9c-4daa-8092-abb00ea95298',54.290,'n1-standard-8-ssd',30,8,0,375,0,'n1-standard-8'),
 ('8c84dcde-03bb-4d94-8f5a-d299ef4aa035',96.090,'n1-standard-16-ssd',60,16,0,375,0,'n1-standard-16'),
-('7921633e-1cb5-49a0-a4b3-4ea9c2765f2e',179.690,'n1-standard-32-ssd',120,32,0,375,0,'n1-standard-32');
+('7921633e-1cb5-49a0-a4b3-4ea9c2765f2e',179.690,'n1-standard-32-ssd',120,32,0,375,0,'n1-standard-32'),
+('cd35e61a-b7b5-4ec2-8320-9cf0fd2ad3ce',346.890,'n1-standard-64-ssd',240,64,0,375,0,'n1-standard-64');
 
 INSERT INTO `machines` (`machine_id`, `name`, `account_id`, `vm_id`, `container_id`, `ssh_port`) VALUES ('86d191cb-72dd-4098-90d5-9c691a93894f', 'machina', '621c2362-37c5-4c1c-9f04-7c0371f3f325', 'machinas-dotted-vim-164110', 'e2894b9c4e7f', '3000');
