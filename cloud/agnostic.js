@@ -32,6 +32,9 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
       controller.findInstanceForTask(taskId)
         .then(vmId => controller.terminateInstance(vmId))
 
+  const changeCwdCommand = params =>
+    (params.workingDirectory) ? `cd ${params.workingDirectory}; export PATH=${params.workingDirectory}:$PATH; ` : ''
+
   return {
     terminateTask,
 
@@ -56,7 +59,7 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
           logger.info('Going to pull for task %s image %s', taskId, imageLocator)
           return persevere(() => controller.pullImage({ docker, image: imageLocator }), Array(10).fill(moment.duration(5, 'seconds')))
             .then(() => logger.info('Successfully pulled for task %s image %s on %s', taskId, imageLocator, vm.ip))
-            .then(() => persevereRunImagePromisified({ docker, image: imageLocator, command: ((params.workingDirectory) ? `cd ${params.workingDirectory}; ` : '') + params.command, opts: containerBindsPerAccount(params.account), delays: [moment.duration(5, 'seconds')] }))
+            .then(() => persevereRunImagePromisified({ docker, image: imageLocator, command: changeCwdCommand(params) + params.command, opts: containerBindsPerAccount(params.account), delays: [moment.duration(5, 'seconds')] }))
             .then(container => logger.info('Container for task %s container %s running', taskId, container.id))
             .then(() => database.tasks.changeTaskStatusRunning(taskId))
             .then(() => logger.info('Task %s running', taskId))
