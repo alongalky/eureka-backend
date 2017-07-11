@@ -124,7 +124,7 @@ describe('Cloud controller', () => {
           .then(() => {
             sinon.assert.calledWith(database.machines.getMachines, '9876')
             sinon.assert.calledWith(Dockerode.prototype.getContainer, 'abcd')
-            sinon.assert.alwaysCalledWith(dContainer.commit, { repo: '9876', tag: '1234' })
+            sinon.assert.alwaysCalledWithMatch(dContainer.commit, { repo: '9876', tag: '1234' })
             sinon.assert.calledWithMatch(googleController.pushImage, { taskId: '1234', params })
             sinon.assert.calledWith(googleController.resolveInstanceInternalIp, 'Vm987')
             done()
