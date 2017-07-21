@@ -67,8 +67,8 @@ module.exports = ({ database, cloud }) => {
                 .then(() => {
                   const tierId = tiers.find(t => t.name === req.body.tier).tier_id
                   const params = {
-                    command: req.body.command,
                     workingDirectory: req.body.workingDirectory,
+                    command: req.body.command,
                     machineName: req.body.machineName,
                     taskName: req.body.taskName,
                     tierId,
@@ -110,6 +110,7 @@ module.exports = ({ database, cloud }) => {
             .map(addDurationAndCost)
             .map(task => ({
               name: task.name,
+              workingDirectory: tasks.workingDirectory,
               command: task.command,
               status: task.status,
               machineName: task.machine_name,

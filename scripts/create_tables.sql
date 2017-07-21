@@ -44,6 +44,7 @@ CREATE TABLE tasks
   `task_id` VARCHAR(45) NOT NULL,
   `name` VARCHAR(255) NOT NULL,
   `status` VARCHAR(45) NOT NULL,
+  `workingDirectory` VARCHAR(255) NOT NULL DEFAULT '',
   `command` VARCHAR(255) NOT NULL,
   `timestamp_initializing` DATETIME NOT NULL,
   `timestamp_running` DATETIME DEFAULT NULL,
