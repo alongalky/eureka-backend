@@ -110,7 +110,7 @@ module.exports = ({ database, cloud }) => {
             .map(addDurationAndCost)
             .map(task => ({
               name: task.name,
-              workingDirectory: tasks.workingDirectory,
+              workingDirectory: task.workingDirectory,
               command: task.command,
               status: task.status,
               machineName: task.machine_name,
