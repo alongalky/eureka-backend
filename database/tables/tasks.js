@@ -28,7 +28,7 @@ const addTask = ({workingDirectory, command, machineName, taskName, tierId, acco
 
   const insertTaskQuery =
     'INSERT INTO tasks (`task_id`, `name`, `status`, `workingDirectory`, `command`, `timestamp_initializing`, `tier_id`, `machine_id`) ' +
-    'VALUES (?, ?, ?, ?, ?, ?, ?)'
+    'VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
 
   return connection().query(findMachineIdQuery, [machineName, account])
     .then(([rows, fields]) => {
