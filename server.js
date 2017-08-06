@@ -47,9 +47,11 @@ if (!controller) {
   throw new Error(`Could not find a cloud controller to handle ${config.cloud_provider}`)
 }
 const cloud = require('./cloud/agnostic')({ config, database, Dockerode, controller, persevere })
+const fake = require('./cloud/fake')({ database })
 const apiRouter = require('./routes/api')({
   database,
   cloud,
+  fake,
   config,
   authStrategy: apiAuthenticate.Strategy()
 })

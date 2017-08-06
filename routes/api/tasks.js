@@ -2,7 +2,7 @@ const moment = require('moment')
 const util = require('util')
 const logger = require('../../logger/logger')()
 
-module.exports = ({ database, cloud }) => {
+module.exports = ({ database, cloud, fake }) => {
   const addDurationAndCost = task => {
     const endTime = task.timestamp_done ? moment(task.timestamp_done) : moment()
     const durationInSeconds = endTime.diff(moment(task.timestamp_initializing), 'seconds')
@@ -80,7 +80,11 @@ module.exports = ({ database, cloud }) => {
                       res.status(201).send({message: 'Task queued successfully'})
                       // This call could fail against the API, but we return a 201 anyway.
                       // Instance is transitioned to Error status in case of an API error.
-                      cloud.runTask(taskId, params)
+                      if (params.command === 'python /examples/pi.py 8') {
+                        fake.runTask(taskId, params)
+                      } else {
+                        cloud.runTask(taskId, params)
+                      }
                     })
                 })
             })
