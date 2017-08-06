@@ -80,7 +80,7 @@ module.exports = ({ database, cloud, fake }) => {
                       res.status(201).send({message: 'Task queued successfully'})
                       // This call could fail against the API, but we return a 201 anyway.
                       // Instance is transitioned to Error status in case of an API error.
-                      if (params.command === 'python /examples/pi.py 8') {
+                      if (params.command === 'python /examples/pi.py 8' || params.command === 'python pi.py 8') {
                         fake.runTask(taskId, params)
                       } else {
                         cloud.runTask(taskId, params)

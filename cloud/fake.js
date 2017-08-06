@@ -1,12 +1,14 @@
 const fs = require('fs')
 const exec = require('child_process').exec
+const logger = require('../logger/logger')()
 
 const fakePiResult = `Pi calculator will run for 100000000 iterations
 Estimated Pi: 3.1415001600000001
 Real pi:      3.1415926535897931`
 
 module.exports = ({ database }) => ({
-  runTask: (taskId, params) =>
+  runTask: (taskId, params) => {
+    logger.info('Running fake task', taskId)
     database.tasks.changeTaskStatusInitializing(taskId)
       .then(() =>
         setTimeout(() => {
@@ -20,4 +22,5 @@ module.exports = ({ database }) => ({
               }, 5000 + 10000 * Math.random()))
         }, 2000 + 5000 * Math.random())
       )
+  }
 })
