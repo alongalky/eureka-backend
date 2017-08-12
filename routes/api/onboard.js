@@ -66,6 +66,7 @@ module.exports = ({ database, config }) => ({
                     sudo mkdir /mnt/eureka-account-$account
                     while ! sudo gsutil ls | grep $account; do sleep 1; done
                     sudo gcsfuse eureka-account-$account /mnt/eureka-account-$account
+                    sudo mkdir -p /mnt/eureka-account-$account/eureka-logs
                     git clone git@bitbucket.org:alongalky/utility-scripts.git
                     cd utility-scripts/dockerfiles/demoimage
                     git pull
