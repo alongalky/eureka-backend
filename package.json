@@ -1,9 +1,5 @@
 {
   "name": "eureka",
-  "engines": {
-    "node": ">=8.3.0"
-  },
-  "engineStrict": true,
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
