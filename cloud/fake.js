@@ -1,5 +1,5 @@
 const fs = require('fs')
-const exec = require('util').promisify(require('child_process').exec)
+const exec = require('child_process').exec
 const logger = require('../logger/logger')()
 
 const fakePiResult = `Pi calculator will run for 100000000 iterations
@@ -19,8 +19,6 @@ module.exports = ({ database }) => ({
             const results = fakePiResult.replace(/^(?=.)/gm, new Date().toISOString() + ' ')
             fs.writeFileSync(`/tmp/logs-${params.taskName}`, results)
             exec(`gsutil cp /tmp/logs-${params.taskName} gs://eureka-account-${params.account}/eureka-logs/`)
-              .then(() => logger.log('Uploaded fake results for task', taskId))
-              .catch(() => logger.error('Failed to upload fake results for task', taskId))
           }, 5000 + 10000 * Math.random())
         }, 2000 + 5000 * Math.random())
       )
