@@ -19,7 +19,6 @@ module.exports = ({ database }) => ({
             const results = fakePiResult.replace(/^(?=.)/gm, new Date().toISOString() + ' ')
             fs.writeFileSync(`/tmp/logs-${params.taskName}`, results)
             exec(`gsutil cp /tmp/logs-${params.taskName} gs://eureka-account-${params.account}/eureka-logs/`)
-              .then(() => exec(`gsutil iam ch serviceAccount:760853174060-compute@developer.gserviceaccount.com:legacyObjectOwner gs://eureka-account-${params.account}/eureka-logs/logs-${params.taskName}`))
               .then(() => logger.log('Uploaded fake results for task', taskId))
               .catch(() => logger.error('Failed to upload fake results for task', taskId))
           }, 5000 + 10000 * Math.random())
