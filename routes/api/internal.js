@@ -15,7 +15,7 @@ module.exports = ({ database, config, cloud }) => {
             let commands = []
             buckets.map(bucket => {
               commands.push(`mkdir -p /mnt/${bucket}`)
-              commands.push(`gcsfuse --limit-ops-per-sec -1 --stat-cache-ttl 1s --type-cache-ttl 1s ${bucket} /mnt/${bucket}`)
+              commands.push(`gcsfuse --file-mode 0755 --limit-ops-per-sec -1 --stat-cache-ttl 1s --type-cache-ttl 1s ${bucket} /mnt/${bucket}`)
             })
             commands.push(startDocker)
             commands.push(waitForDocker)
