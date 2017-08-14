@@ -1,5 +1,6 @@
 const moment = require('moment')
 const logger = require('../logger/logger')()
+const deepExtend = require('deep-extend')
 
 module.exports = ({ config, database, Dockerode, controller, persevere }) => {
   const containerBindsPerAccount = account => ({ HostConfig: { Binds: [ `/mnt/eureka-account-${account}:/keep` ] } })
@@ -58,8 +59,20 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
           const docker = new Dockerode({ host: vm.ip, port: config.docker_port })
           logger.info('Going to pull for task %s image %s', taskId, imageLocator)
           return persevere(() => controller.pullImage({ docker, image: imageLocator }), Array(10).fill(moment.duration(5, 'seconds')))
-            .then(() => logger.info('Successfully pulled for task %s image %s on %s', taskId, imageLocator, vm.ip))
-            .then(() => persevereRunImagePromisified({ docker, image: imageLocator, command: changeCwdCommand(params) + params.command, opts: containerBindsPerAccount(params.account), delays: [moment.duration(5, 'seconds')] }))
+            .then(() => {
+              logger.info('Successfully pulled for task %s image %s on %s', taskId, imageLocator, vm.ip)
+              return database.machines.getMachines(params.account)
+            })
+            .then(machines => {
+              const machine = machines.find(machine => machine.name === params.machineName)
+              return persevereRunImagePromisified({
+                docker,
+                image: imageLocator,
+                command: changeCwdCommand(params) + params.command,
+                opts: deepExtend(containerBindsPerAccount(params.account), JSON.parse(machine.container_options)),
+                delays: [moment.duration(5, 'seconds')]
+              })
+            })
             .then(container => logger.info('Container for task %s container %s running', taskId, container.id))
             .then(() => database.tasks.changeTaskStatusRunning(taskId))
             .then(() => logger.info('Task %s running', taskId))

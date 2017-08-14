@@ -21,6 +21,7 @@ CREATE TABLE machines
   `container_id` VARCHAR(255) NOT NULL,
   `ssh_port` VARCHAR(5) NOT NULL,
   `account_id` VARCHAR(45) NOT NULL,
+  `container_options` VARCHAR(1024) NOT NULL DEFAULT '{}',
   PRIMARY KEY (machine_id),
   FOREIGN KEY (account_id) REFERENCES accounts(account_id)
 );
