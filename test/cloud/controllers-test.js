@@ -86,7 +86,7 @@ describe('Cloud controller', () => {
     describe('happy flow', () => {
       beforeEach(() => {
         database.tasks.changeTaskStatusInitializing.resolves()
-        database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969', container_options: '{}' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd', container_options: '{ "HostConfig": { "Privileged": true } }' } ])
+        database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969', docker_within_docker: false }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd', docker_within_docker: true } ])
         database.tiers.getTier.resolves(tier)
         googleController.runInstance.resolves({ ip: '1.2.3.4' })
         googleController.resolveInstanceInternalIp.resolves('9.8.7.6')

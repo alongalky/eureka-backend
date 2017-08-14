@@ -4,6 +4,8 @@ const deepExtend = require('deep-extend')
 
 module.exports = ({ config, database, Dockerode, controller, persevere }) => {
   const containerBindsPerAccount = account => ({ HostConfig: { Binds: [ `/mnt/eureka-account-${account}:/keep` ] } })
+  const privilegedContainer = { HostConfig: { Privileged: true } }
+  const launchDockerd = '/usr/bin/dockerd & '
   const persevereRunImagePromisified = ({ docker, image, streams, command, opts, delays }) =>
     persevere(() =>
       new Promise((resolve, reject) =>
@@ -68,8 +70,8 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
               return persevereRunImagePromisified({
                 docker,
                 image: imageLocator,
-                command: changeCwdCommand(params) + params.command,
-                opts: deepExtend(containerBindsPerAccount(params.account), JSON.parse(machine.container_options)),
+                command: ((machine.docker_within_docker) ? launchDockerd : '') + changeCwdCommand(params) + params.command,
+                opts: deepExtend(containerBindsPerAccount(params.account), (machine.docker_within_docker) ? privilegedContainer : {}),
                 delays: [moment.duration(5, 'seconds')]
               })
             })
