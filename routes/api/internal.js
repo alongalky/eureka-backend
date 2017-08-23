@@ -44,7 +44,7 @@ module.exports = ({ database, config, cloud }) => {
             fi
           done
           skip=1
-          while [ docker ps | grep -q $container ]; do
+          while docker ps | grep -q $container; do
             docker logs --since=$logs_since -t $container | tail -n+$skip &>> $logdir/logs-${taskName}
             logs_since=$(tail -n1 $logdir/logs-${taskName} | awk '{print $1}')
             if [ ! -z $logs_since ]; then skip=2; fi
