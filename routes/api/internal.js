@@ -43,16 +43,13 @@ module.exports = ({ database, config, cloud }) => {
               sleep 1
             fi
           done
-          skip=1
-          while docker ps | grep -q $container; do
-            docker logs --since=$logs_since -t $container | tail -n+$skip &>> $logdir/logs-${taskName}
-            logs_since=$(tail -n1 $logdir/logs-${taskName} | awk '{print $1}')
-            if [ ! -z $logs_since ]; then skip=2; fi
+          exit_status=124
+          while [ $exit_status -eq 124 ]; do
+            timeout 10 docker logs --since=$logs_since -t -f $container &>> $logdir/logs-${taskName}
+            exit_status=$?
+            logs_since=$(date +%s)
             sync
-            sleep 10
           done; \
-          docker logs --since=$logs_since -t $container | tail -n+$skip &>> $logdir/logs-${taskName} ; \
-          sync; \
           curl -X PUT -H 'Content-Type: application/json' -d '{"status":"done"}' ${config.eureka_endpoint}/api/_internal/tasks/${taskId} &
         `
       )
