@@ -3,6 +3,7 @@ const logger = require('../logger/logger')()
 const deepExtend = require('deep-extend')
 
 module.exports = ({ config, database, Dockerode, controller, persevere }) => {
+  const dockerDefaultOptions = { HostConfig: { LogConfig: { Config: { mode: 'non-blocking' } } } }
   const containerBindsPerAccount = account => ({ HostConfig: { Binds: [ `/mnt/eureka-account-${account}:/keep` ] } })
   const privilegedContainer = { HostConfig: { Privileged: true } }
   const launchDockerd = '/usr/bin/dockerd & '
@@ -71,7 +72,7 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
                 docker,
                 image: imageLocator,
                 command: ((machine.docker_within_docker) ? launchDockerd : '') + changeCwdCommand(params) + params.command,
-                opts: deepExtend(containerBindsPerAccount(params.account), (machine.docker_within_docker) ? privilegedContainer : {}),
+                opts: deepExtend(dockerDefaultOptions, containerBindsPerAccount(params.account), (machine.docker_within_docker) ? privilegedContainer : {}),
                 delays: [moment.duration(5, 'seconds')]
               })
             })
