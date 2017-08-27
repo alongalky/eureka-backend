@@ -33,7 +33,7 @@ module.exports = ({ database, config, cloud }) => {
       .then(bucket =>
         `
           mkdir -p /mnt/${bucket}
-          gcsfuse --limit-ops-per-sec -1 --stat-cache-ttl 1s --type-cache-ttl 1s ${bucket} /mnt/${bucket}
+          gcsfuse --file-mode 0755 --limit-ops-per-sec -1 --stat-cache-ttl 1s --type-cache-ttl 1s ${bucket} /mnt/${bucket}
           logdir=/mnt/${bucket}/eureka-logs
           mkdir -p $logdir
           ${startDocker}
