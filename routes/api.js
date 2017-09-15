@@ -31,6 +31,7 @@ module.exports = ({ database, cloud, fake, config, authStrategy }) => {
 
   accountsRouter.post('/tasks', tasksApi.addTask)
   accountsRouter.get('/tasks', tasksApi.getTasks)
+  accountsRouter.get('/tasks/:task_name', tasksApi.getTaskLog)
   accountsRouter.put('/tasks', tasksApi.killTask)
   accountsRouter.get('/machines', machinesApi.getMachines)
 

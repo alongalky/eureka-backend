@@ -1,4 +1,4 @@
-module.exports = ({ config, gce, gAuth }) => {
+module.exports = ({ config, gce, gcs, gAuth }) => {
   const gZone = gce.zone(config.google.zone)
   const getGAuthToken = () =>
     new Promise((resolve, reject) => {
@@ -11,13 +11,30 @@ module.exports = ({ config, gce, gAuth }) => {
         }
       })
     })
+  const getBucketForAccount = account => 'eureka-account-' + account
   return {
     controls: 'google',
     resolveInstanceInternalIp: instanceId => gZone.vm(instanceId).get().then(([vm]) => vm.metadata.networkInterfaces[0].networkIP),
     resolveInstanceExternalIp: instanceId => gZone.vm(instanceId).get().then(([vm]) => vm.metadata.networkInterfaces[0].accessConfigs[0].natIP),
     findInstanceForTask: taskId => Promise.resolve('runner-' + taskId),
     getInstanceTags: instanceId => gZone.vm(instanceId).getTags().then(([tags]) => tags),
-    getBucketForAccount: account => Promise.resolve('eureka-account-' + account),
+    getBucketForAccount: account => Promise.resolve(getBucketForAccount(account)),
+    getLog: ({ accountId, taskName }) => {
+      const bucketName = getBucketForAccount(accountId)
+      const bucket = gcs.bucket(bucketName)
+      bucket.getFiles((err, files) => {
+        if (!err) files.map(f => console.log(f.name))
+        else console.log(err)
+      })
+      const remoteReadStream = bucket.file(`eureka-logs/logs-${taskName}`).createReadStream()
+      let data = []
+      remoteReadStream.on('data', chunk => { data.push(chunk) })
+
+      return new Promise((resolve, reject) => {
+        remoteReadStream.on('end', () => resolve(data.join('')))
+        remoteReadStream.on('error', err => reject(err))
+      })
+    },
     runInstance: ({ taskId, tier, params }) => {
       const standardDisk = `projects/${config.google.project}/zones/${config.google.zone}/diskTypes/pd-standard`
       const ssdDisk = `projects/${config.google.project}/zones/${config.google.zone}/diskTypes/pd-ssd`

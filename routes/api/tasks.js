@@ -179,6 +179,68 @@ module.exports = ({ database, cloud, fake }) => {
           }
         })
       })
+    },
+
+    getTaskLog: (req, res) => {
+      req.checkParams('task_name', 'Expected name between 1 to 60 characters').notEmpty().isLength({min: 1, max: 60})
+      return req.getValidationResult().then(result => {
+        if (!result.isEmpty()) {
+          res.status(422).send('There have been validation errors: ' + util.inspect(result.array()))
+          return
+        }
+
+        database.tasks.getTasks({
+          account: req.params.account_id
+        }).then(allTasks => {
+          const matchingTasks = allTasks.filter(task => task.name.includes(req.params.task_name))
+
+          if (matchingTasks.length === 0) {
+            const err = new Error()
+            err.type = 'task_name_non_existent'
+            throw err
+          }
+          if (matchingTasks.length > 1) {
+            const err = new Error()
+            err.type = 'task_name_ambiguous'
+            throw err
+          }
+          const task = matchingTasks[0]
+          if (task.status === 'Initializing') {
+            const err = new Error()
+            err.type = 'task_initializing'
+            throw err
+          }
+
+          logger.info(`Getting Logs for task ${task.task_id} with name ${task.name}`)
+
+          return cloud.getLog({
+            accountId: req.params.account_id,
+            taskName: task.name
+          }).then(data => res.send({ task_name: task.name, data }))
+            .catch(error => {
+              if (error.code === 404) {
+                const err = new Error()
+                err.type = 'log_file_not_found'
+                throw err
+              }
+              throw error
+            })
+        })
+        .catch(err => {
+          if (err.type === 'task_name_non_existent') {
+            res.status(404).send('Task not found')
+          } else if (err.type === 'task_name_ambiguous') {
+            res.status(400).send('Task name matches more than one task')
+          } else if (err.type === 'task_name_initializing') {
+            res.status(400).send('Task name matches an initializing task, no log file yet')
+          } else if (err.type === 'log_file_not_found') {
+            res.status(400).send('Cannot find log file')
+          } else {
+            logger.error(err)
+            res.status(500).send('Failed to modify task')
+          }
+        })
+      })
     }
   }
 }

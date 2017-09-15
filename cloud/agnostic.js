@@ -91,6 +91,7 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
 
     resolveInstanceExternalIp: vmId => controller.resolveInstanceExternalIp(vmId),
     getInstanceTags: vmId => controller.getInstanceTags(vmId),
-    getBucketForAccount: account => controller.getBucketForAccount(account)
+    getBucketForAccount: account => controller.getBucketForAccount(account),
+    getLog: ({ accountId, taskName }) => controller.getLog({ accountId, taskName })
   }
 }

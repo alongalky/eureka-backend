@@ -39,7 +39,8 @@ describe('API', () => {
     resolveInstanceExternalIp: sinon.stub(),
     terminateTask: sinon.stub(),
     getInstanceTags: sinon.stub(),
-    getBucketForAccount: sinon.stub()
+    getBucketForAccount: sinon.stub(),
+    getLog: sinon.stub()
   }
 
   let succeedAuthentication = true
@@ -97,6 +98,7 @@ describe('API', () => {
     cloud.getInstanceTags.reset()
     cloud.getBucketForAccount.reset()
     cloud.terminateTask.reset()
+    cloud.getLog.reset()
     succeedAuthentication = true
   })
 
@@ -529,6 +531,31 @@ describe('API', () => {
           .expect(401)
           .end((err, res) => {
             sinon.assert.notCalled(database.tasks.getTasks)
+            done(err)
+          })
+      })
+    })
+
+    describe('GET /tasks/:task_name', () => {
+      beforeEach(() => {
+        const goodTask = {
+          name: 'good-task'
+        }
+        cloud.getLog.resolves()
+        database.tasks.getTasks.resolves([ goodTask ])
+      })
+      it('returns 200 on happy flow', done => {
+        supertest(app)
+          .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks/good-task')
+          .expect(200, done)
+      })
+      it('returns 404 when task_name does not match any task', done => {
+        supertest(app)
+          .get('/api/accounts/b9fe526d-6c9c-4c59-a705-c145c39c0a91/tasks/bad-task')
+          .expect(404)
+          .end((err, res) => {
+            sinon.assert.notCalled(cloud.getLog)
+
             done(err)
           })
       })
