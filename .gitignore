@@ -40,3 +40,6 @@ tags
 
 # Visual Studio Code settings
 .vscode
+
+# Uploads folder
+uploads/

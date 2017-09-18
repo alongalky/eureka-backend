@@ -2,6 +2,15 @@ const express = require('express')
 const apiRouter = express.Router()
 const accountsRouter = express.Router({mergeParams: true})
 const passport = require('passport')
+const multer = require('multer')
+const upload = multer({
+  dest: 'uploads/',
+  limits: {
+    fieldNameSize: 100,
+    files: 1,
+    fileSize: 10 * 1024 * 1024
+  }
+})
 
 module.exports = ({ database, cloud, fake, config, authStrategy }) => {
   const machinesApi = require('./api/machines')({ database, cloud })
@@ -34,6 +43,7 @@ module.exports = ({ database, cloud, fake, config, authStrategy }) => {
   accountsRouter.get('/tasks/:task_name', tasksApi.getTaskLog)
   accountsRouter.put('/tasks', tasksApi.killTask)
   accountsRouter.get('/machines', machinesApi.getMachines)
+  accountsRouter.post('/machines', upload.single('file-upload'), machinesApi.uploadFile)
 
   return apiRouter
 }
