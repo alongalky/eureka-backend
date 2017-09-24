@@ -303,7 +303,7 @@ describe('Cloud controller', () => {
     })
 
     describe('runInstance', () => {
-      const tier = { cloud_type_name: 'micro', local_disk_gb: 20 }
+      const tier = { cloud_type_name: 'micro', local_disk_gb: 20, gpu_count: 0 }
       it('on happy flow formatted VM metadata is returned', done => {
         gZone.createVM.resolves([gVm])
         gVm.waitFor.resolves([{
@@ -433,8 +433,7 @@ describe('Cloud controller', () => {
             done()
           })
       })
-
-      it('throws and does not delete instance when fails to wait for RUNNING state', (done) => {
+      it('throws and does not delete instance when fails to wait for RUNNING state', done => {
         gZone.createVM.resolves([gVm])
         gZone.vm.returns(deleteVm)
         deleteVm.delete.resolves()
@@ -443,6 +442,33 @@ describe('Cloud controller', () => {
         googleController.runInstance({ taskId: '1234', tier, params: {} })
           .catch(() => {
             sinon.assert.notCalled(deleteVm.delete)
+            done()
+          })
+      })
+      it('does not include gpu information in instance info when tier.gpu_count is 0', done => {
+        gZone.createVM.resolves([gVm])
+        gVm.waitFor.resolves([{ networkInterfaces: [{}] }])
+
+        googleController.runInstance({ taskId: '1234', tier, params: {} })
+          .then(vm => {
+            sinon.assert.calledWithMatch(gZone.createVM, 'runner-1234', { guestAccelerators: undefined })
+            done()
+          })
+      })
+      it('includes correct gpu information tier.gpu_count > 0', done => {
+        const gpuTier = Object.assign({}, tier, {gpu_count: 4})
+
+        gZone.createVM.resolves([gVm])
+        gVm.waitFor.resolves([{ networkInterfaces: [{}] }])
+
+        googleController.runInstance({ taskId: '1234', tier: gpuTier, params: {} })
+          .then(vm => {
+            sinon.assert.calledWithMatch(gZone.createVM, 'runner-1234', {
+              guestAccelerators: [{
+                acceleratorType: `projects/${config.google.project}/zones/${config.google.zone}/acceleratorTypes/nvidia-tesla-k80`,
+                acceleratorCount: 4
+              }]
+            })
             done()
           })
       })

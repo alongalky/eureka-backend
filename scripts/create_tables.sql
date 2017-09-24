@@ -33,6 +33,7 @@ CREATE TABLE tiers
   `name` VARCHAR(255) NOT NULL,
   `memory_gb` DECIMAL(19,4) NOT NULL,
   `cpu_count` INT NOT NULL,
+  `gpu_count` INT NOT NULL,
   `local_disk_gb` INT NOT NULL,
   `ssd_disk_gb` INT NOT NULL,
   `cloud_storage_gb` INT NOT NULL,

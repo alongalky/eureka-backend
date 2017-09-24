@@ -10,11 +10,9 @@ var options = {
   formatter: 'stylish',
 
   // Consider linting warnings as errors and return failure
-  strict: true
+  strict: true,
+
+  timeout: 5000
 }
 
-describe('Lint', () => {
-  it('Lint all .js files', () => {
-    lint(paths, options)
-  })
-})
+lint(paths, options)

@@ -23,6 +23,12 @@ module.exports = ({ config, gce, gAuth }) => {
       const ssdDisk = `projects/${config.google.project}/zones/${config.google.zone}/diskTypes/pd-ssd`
       const instanceConfig = {
         machineType: tier.cloud_type_name,
+        guestAccelerators: tier.gpu_count === 0 ? undefined : [
+          {
+            'acceleratorType': `projects/${config.google.project}/zones/${config.google.zone}/acceleratorTypes/nvidia-tesla-k80`,
+            'acceleratorCount': tier.gpu_count
+          }
+        ],
         disks: [ {
           boot: true,
           mode: 'READ_WRITE',

@@ -6,6 +6,6 @@ module.exports = {
   },
   google: {
     region: 'us-east1',
-    zone: 'us-east1-b'
+    zone: 'us-east1-c'
   }
 }
