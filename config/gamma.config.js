@@ -8,7 +8,7 @@ module.exports = {
   google: {
     project: 'eureka-gamma',
     project_service_account: '1004834989148-compute@developer.gserviceaccount.com',
-    instance_image: 'docker-gcfuse-scripts',
+    instance_image: 'ubuntu-runner',
     docker_registry: 'us.gcr.io'
   },
   database: {
