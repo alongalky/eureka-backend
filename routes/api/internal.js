@@ -29,8 +29,12 @@ module.exports = ({ database, config, cloud }) => {
     const account = tags.find(tag => tag.startsWith('account-')).substr('account-'.length)
     const taskName = tags.find(tag => tag.startsWith('taskname-')).substr('taskname-'.length)
     const taskId = tags.find(tag => tag.startsWith('task-')).substr('task-'.length)
-    return cloud.getBucketForAccount(account)
-      .then(bucket =>
+
+    const remoteImageName = [[config.google.docker_registry, config.google.project, account].join('/'), taskId].join(':')
+    return Promise.all([
+      cloud.getBucketForAccount(account),
+      database.tasks.getTasks({account}).then(tasks => tasks.find(t => t.task_id === taskId))])
+      .then(([bucket, task]) =>
         `
           mkdir -p /mnt/${bucket}
           gcsfuse --file-mode 0755 --limit-ops-per-sec -1 --stat-cache-ttl 1s --type-cache-ttl 1s ${bucket} /mnt/${bucket}
@@ -38,7 +42,9 @@ module.exports = ({ database, config, cloud }) => {
           mkdir -p $logdir
           ${startDocker}
           while [ -z $container ]; do
-              container=$(docker ps --all | tail -n+2 | awk '{ print $1 }')
+            docker pull ${remoteImageName}
+            docker run -t ${remoteImageName} /bin/bash -l -c "${task.commands.join(' ')}"
+            container=$(docker ps --all | tail -n+2 | awk '{ print $1 }')
             if [ -z $container ]; then
               sleep 1
             fi

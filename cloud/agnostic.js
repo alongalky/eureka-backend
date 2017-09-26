@@ -58,28 +58,8 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
               return vm
             })
         ]))
-        .then(([imageLocator, vm]) => {
-          const docker = new Dockerode({ host: vm.ip, port: config.docker_port })
-          logger.info('Going to pull for task %s image %s', taskId, imageLocator)
-          return persevere(() => controller.pullImage({ docker, image: imageLocator }), Array(10).fill(moment.duration(5, 'seconds')))
-            .then(() => {
-              logger.info('Successfully pulled for task %s image %s on %s', taskId, imageLocator, vm.ip)
-              return database.machines.getMachines(params.account)
-            })
-            .then(machines => {
-              const machine = machines.find(machine => machine.name === params.machineName)
-              return persevereRunImagePromisified({
-                docker,
-                image: imageLocator,
-                command: ((machine.docker_within_docker) ? launchDockerd : '') + changeCwdCommand(params) + params.command,
-                opts: deepExtend(dockerDefaultOptions, containerBindsPerAccount(params.account), (machine.docker_within_docker) ? privilegedContainer : {}),
-                delays: [moment.duration(5, 'seconds')]
-              })
-            })
-            .then(container => logger.info('Container for task %s container %s running', taskId, container.id))
-            .then(() => database.tasks.changeTaskStatusRunning(taskId))
-            .then(() => logger.info('Task %s running', taskId))
-        })
+        .then(() => database.tasks.changeTaskStatusRunning(taskId))
+        .then(() => logger.info('Task %s running', taskId))
         .catch(err => {
           logger.error('Error starting task', taskId, err)
           terminateTask(taskId).catch(() => {})
