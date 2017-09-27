@@ -41,6 +41,7 @@ module.exports = ({ config, gce, gAuth }) => {
         } ],
         tags: [
           'type-runner',
+          'docker-registry',
           ['account', params.account].join('-'),
           ['task', taskId].join('-'),
           ['taskname', params.taskName].join('-')

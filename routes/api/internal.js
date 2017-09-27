@@ -42,8 +42,8 @@ module.exports = ({ database, config, cloud }) => {
           mkdir -p $logdir
           ${startDocker}
           while [ -z $container ]; do
-            docker pull ${remoteImageName}
-            docker run -t ${remoteImageName} /bin/bash -l -c "${task.commands.join(' ')}"
+            gcloud docker -- pull ${remoteImageName}
+            docker run -t ${remoteImageName} /bin/bash -l -c "${task.command}"
             container=$(docker ps --all | tail -n+2 | awk '{ print $1 }')
             if [ -z $container ]; then
               sleep 1
@@ -57,8 +57,7 @@ module.exports = ({ database, config, cloud }) => {
             sync
           done; \
           curl -X PUT -H 'Content-Type: application/json' -d '{"status":"done"}' ${config.eureka_endpoint}/api/_internal/tasks/${taskId} &
-        `
-      )
+        `)
   }
   return {
     putTask: (req, res) => {
