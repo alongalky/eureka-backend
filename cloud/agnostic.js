@@ -1,20 +1,7 @@
 const moment = require('moment')
 const logger = require('../logger/logger')()
-const deepExtend = require('deep-extend')
 
 module.exports = ({ config, database, Dockerode, controller, persevere }) => {
-  const dockerDefaultOptions = { HostConfig: { LogConfig: { Config: { mode: 'non-blocking' } } } }
-  const containerBindsPerAccount = account => ({ HostConfig: { Binds: [ `/mnt/eureka-account-${account}:/keep` ] } })
-  const privilegedContainer = { HostConfig: { Privileged: true } }
-  const launchDockerd = '/usr/bin/dockerd & '
-  const persevereRunImagePromisified = ({ docker, image, streams, command, opts, delays }) =>
-    persevere(() =>
-      new Promise((resolve, reject) =>
-        docker.run(image, '/bin/bash -l -c'.split(' ').concat(command), null, opts, err => reject(err))
-          .on('container', container => resolve(container))
-      ),
-      delays
-    )
   const snapshotMachine = ({ machine, taskId, params }) =>
     controller.resolveInstanceInternalIp(machine.vm_id)
       .then(ip => {
@@ -35,9 +22,6 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
   const terminateTask = taskId =>
       controller.findInstanceForTask(taskId)
         .then(vmId => controller.terminateInstance(vmId))
-
-  const changeCwdCommand = params =>
-    (params.workingDirectory) ? `cd ${params.workingDirectory}; export PATH=${params.workingDirectory}:$PATH; ` : ''
 
   return {
     terminateTask,

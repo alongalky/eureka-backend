@@ -60,6 +60,10 @@ describe('API', () => {
   const config = {
     authentication: {
       secret: 'puppy'
+    },
+    google: {
+      docker_registry: 'docker.reg',
+      project: 'eureka-test'
     }
   }
   const apiRouterParams = {
@@ -842,7 +846,7 @@ describe('API', () => {
         it('returns 200 on happy flow for type-runner', done => {
           cloud.getInstanceTags.resolves(['type-runner', 'account-1234', 'task-9314', 'taskname-9191'])
           cloud.getBucketForAccount.resolves('eureka-account-1234')
-          database.machines.getMachines.rejects(new Error('Crazy API error'))
+          database.tasks.getTasks.resolves([{ task_id: '9314', workingDirectory: '/test', command: 'echo hi' }])
           supertest(app)
             .get(`/api/_internal/scripts?vm_id=machinas`)
             .expect(200)

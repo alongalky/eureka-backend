@@ -29,7 +29,6 @@ describe('Cloud controller', () => {
       resolveInstanceExternalIp: sinon.stub(),
       resolveInstanceInternalIp: sinon.stub(),
       pushImage: sinon.stub(),
-      pullImage: sinon.stub(),
       findInstanceForTask: taskId => Promise.resolve('runner-' + taskId)
     }
     const database = {
@@ -57,7 +56,6 @@ describe('Cloud controller', () => {
     beforeEach(() => {
       googleController.runInstance.reset()
       googleController.terminateInstance.reset()
-      googleController.pullImage.reset()
       googleController.pushImage.reset()
       googleController.resolveInstanceExternalIp.reset()
       googleController.resolveInstanceInternalIp.reset()
@@ -91,7 +89,6 @@ describe('Cloud controller', () => {
         googleController.runInstance.resolves({ ip: '1.2.3.4' })
         googleController.resolveInstanceInternalIp.resolves('9.8.7.6')
         googleController.pushImage.resolves(remoteImageName)
-        googleController.pullImage.resolves()
         Dockerode.prototype.run.returns({ on: (event, callback) => callback('1423') })
         Dockerode.prototype.getContainer.returns(dContainer)
         database.tasks.changeTaskStatusRunning.resolves()
@@ -110,11 +107,10 @@ describe('Cloud controller', () => {
             done()
           })
       })
-      it('it initializes Dockerode twice, once for machina and once for runner', done => {
+      it('it initializes Dockerode only once, for snapshotting and uploading to registry', done => {
         cloud.runTask(taskId, params)
           .then(() => {
-            sinon.assert.calledTwice(Dockerode)
-            sinon.assert.calledWithMatch(Dockerode, { host: '1.2.3.4' })
+            sinon.assert.calledOnce(Dockerode)
             sinon.assert.calledWithMatch(Dockerode, { host: '9.8.7.6' })
             done()
           })
@@ -130,12 +126,11 @@ describe('Cloud controller', () => {
             done()
           })
       })
-      it('only one runner machine is started, properly tagged and proper image pulled', done => {
+      it('only one runner machine is started, properly tagged', done => {
         cloud.runTask(taskId, params)
           .then(() => {
             sinon.assert.calledOnce(googleController.runInstance)
             sinon.assert.calledWith(googleController.runInstance, { taskId: '1234', tier, params })
-            sinon.assert.alwaysCalledWithMatch(googleController.pullImage, { image: remoteImageName })
             done()
           })
       })
@@ -217,55 +212,8 @@ describe('Cloud controller', () => {
             sinon.assert.calledOnce(Dockerode)
             sinon.assert.calledWith(googleController.resolveInstanceInternalIp, 'Vm987')
             sinon.assert.calledWithMatch(Dockerode, { host: '9.8.7.6' })
-            sinon.assert.notCalled(googleController.pullImage)
             sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
             done()
-          })
-      })
-      it('transitions task to Error if docker pull fails', done => {
-        database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
-        database.tasks.changeTaskStatusInitializing.resolves()
-        googleController.resolveInstanceInternalIp.resolves('9.8.7.6')
-        database.tiers.getTier.resolves(tier)
-        dContainer.commit.resolves()
-        googleController.pushImage.resolves(remoteImageName)
-        googleController.runInstance.resolves({ ip: '2.2.2.2' })
-        googleController.pullImage.rejects(new Error('Crazy Docker Error'))
-
-        cloud.runTask('1234', params)
-          .then(() => {
-            sinon.assert.calledTwice(Dockerode)
-            sinon.assert.calledWithMatch(Dockerode, { host: '9.8.7.6' })
-            sinon.assert.calledWithMatch(Dockerode, { host: '2.2.2.2' })
-            sinon.assert.calledWith(googleController.resolveInstanceInternalIp, 'Vm987')
-            sinon.assert.calledWithMatch(googleController.pullImage, { image: remoteImageName })
-            sinon.assert.notCalled(Dockerode.prototype.run)
-            sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
-            done()
-          })
-      })
-      it('transitions task to Error if docker run fails', done => {
-        database.machines.getMachines.resolves([ { name: 'testmachina', vm_id: 'Vm123', container_id: '6969' }, { name: 'otramachina', vm_id: 'Vm987', container_id: 'abcd' } ])
-        database.tasks.changeTaskStatusInitializing.resolves()
-        googleController.resolveInstanceInternalIp.resolves('9.8.7.6')
-        database.tiers.getTier.resolves(tier)
-        dContainer.commit.resolves()
-        googleController.pushImage.resolves(remoteImageName)
-        googleController.runInstance.resolves({ ip: '2.2.2.2' })
-        googleController.pullImage.resolves()
-        Dockerode.prototype.run = (a, b, c, d, errorCallback) => errorCallback(new Error('Crazy Docker Error'))
-
-        cloud.runTask('1234', params)
-          .then(() => {
-            sinon.assert.calledTwice(Dockerode)
-            sinon.assert.calledWithMatch(Dockerode, { host: '9.8.7.6' })
-            sinon.assert.calledWithMatch(Dockerode, { host: '2.2.2.2' })
-            sinon.assert.calledWith(googleController.resolveInstanceInternalIp, 'Vm987')
-            sinon.assert.calledWithMatch(googleController.pullImage, { image: remoteImageName })
-            sinon.assert.notCalled(database.tasks.changeTaskStatusRunning)
-            sinon.assert.calledWith(database.tasks.changeTaskStatusError, '1234')
-            done()
-            Dockerode.prototype.run = sinon.stub()
           })
       })
     })
@@ -348,6 +296,7 @@ describe('Cloud controller', () => {
               {
                 tags: [
                   'type-runner',
+                  'docker-registry',
                   ['account', params.account].join('-'),
                   ['task', '1234'].join('-'),
                   ['taskname', params.taskName].join('-')
@@ -545,61 +494,6 @@ describe('Cloud controller', () => {
             }
           }
           googleController.pushImage({ docker, taskId, params })
-            .catch(() => {
-              done()
-            })
-        })
-      })
-      describe('pullImage', () => {
-        it('on happy flow returns properly formatted image locator', done => {
-          gAuth.getToken = callback => callback(null, 'token')
-          docker.pull = (image, {authconfig}, callback) => {
-            if (authconfig.password !== 'token') {
-              sinon.assert.fail('token passed incorrectly')
-              done()
-            } else if (image !== 'Image/Locator:39484') {
-              sinon.assert.fail('image locator has been altered')
-              done()
-            } else {
-              callback(null, fakestream)
-            }
-          }
-          dModem.followProgress = (stream, onFinishedCallback) =>
-            onFinishedCallback(null)
-
-          googleController.pullImage({ docker, image: 'Image/Locator:39484' })
-            .then(imageLocator => {
-              if (imageLocator !== 'Image/Locator:39484') {
-                sinon.assert.fail('returned image locator has not proper format')
-              }
-              done()
-            })
-        })
-        it('throws when gAuth getToken fails', done => {
-          dImage.tag.resolves()
-          gAuth.getToken = callback => callback('getToken ERROR', null)
-          googleController.pushImage({ docker, taskId, params })
-            .catch(() => {
-              done()
-            })
-        })
-        it('throws when pull fails', done => {
-          gAuth.getToken = callback => callback(null, 'token')
-          docker.pull = (image, {authconfig}, callback) => {
-            if (authconfig.password !== 'token') {
-              sinon.assert.fail('token passed incorrectly')
-              done()
-            } else if (image !== 'Image/Locator:39484') {
-              sinon.assert.fail('image locator has been altered')
-              done()
-            } else {
-              callback('pull ERROR', null)
-            }
-          }
-          dModem.followProgress = (stream, onFinishedCallback) =>
-            onFinishedCallback(null)
-
-          googleController.pullImage({ docker, image: 'Image/Locator:39484' })
             .catch(() => {
               done()
             })

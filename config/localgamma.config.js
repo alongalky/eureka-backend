@@ -1,7 +1,6 @@
 const user = 'roboto'
 const password = 'j5GAVFeAPE4CQBhlnzbj'
 const database = 'eureka_gamma'
-const instanceName = 'eureka-gamma:us-east1:eureka-gamma'
 
 module.exports = {
   eureka_endpoint: 'http://10.142.0.7',
@@ -17,8 +16,7 @@ module.exports = {
     port: 3306,
     user,
     password,
-    database,
-//    socketPath: `/cloudsql/${instanceName}`
+    database
   },
   applicationInsights: {
     iKey: process.env.APPINSIGHTS_INSTRUMENTATIONKEY

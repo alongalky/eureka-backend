@@ -124,33 +124,6 @@ module.exports = ({ config, gce, gAuth }) => {
             })
           })
         })
-    },
-    pullImage: ({ docker, image }) => {
-      return getGAuthToken().then(token => {
-        const dockerAuth = {
-          username: 'oauth2accesstoken',
-          password: token,
-          serveraddress: config.google.docker_registry
-        }
-        return new Promise((resolve, reject) => {
-          docker.pull(image, { authconfig: dockerAuth }, (err, stream) => {
-            if (err || !stream) {
-              err.message = 'pullImage ' + err.message
-              reject(err)
-            } else {
-              const onFinished = err => {
-                if (err) {
-                  err.message = 'pullImage ' + err.message
-                  reject(err)
-                } else {
-                  resolve(image)
-                }
-              }
-              docker.modem.followProgress(stream, onFinished)
-            }
-          })
-        })
-      })
     }
   }
 }

@@ -4,6 +4,11 @@ const logger = require('../../logger/logger')()
 module.exports = ({ database, config, cloud }) => {
   const waitForDocker = 'while ! docker ps &> /dev/null; do sleep 1; done'
   const startDocker = '/bin/systemctl start docker'
+  const changeCwdCommand = task => Object.assign({}, task, {
+    command: [(task.workingDirectory) ? `cd ${task.workingDirectory}; export PATH=${task.workingDirectory}:$PATH; ` : '',
+      task.command].join(' ')
+  })
+
   const buildMachinasScript = (vmId, tags) => {
     return database.accounts.getAccounts(vmId)
       .then(accounts => {
@@ -33,7 +38,10 @@ module.exports = ({ database, config, cloud }) => {
     const remoteImageName = [[config.google.docker_registry, config.google.project, account].join('/'), taskId].join(':')
     return Promise.all([
       cloud.getBucketForAccount(account),
-      database.tasks.getTasks({account}).then(tasks => tasks.find(t => t.task_id === taskId))])
+      database.tasks.getTasks({account}).then(tasks => {
+        const task = tasks.find(t => t.task_id === taskId)
+        return changeCwdCommand(task)
+      })])
       .then(([bucket, task]) =>
         `
           mkdir -p /mnt/${bucket}
@@ -43,12 +51,13 @@ module.exports = ({ database, config, cloud }) => {
           ${startDocker}
           while [ -z $container ]; do
             gcloud docker -- pull ${remoteImageName}
-            docker run -t ${remoteImageName} /bin/bash -l -c "${task.command}"
+            docker run -t ${remoteImageName} /bin/bash -l -c -v /mnt/eureka-account-${account}/:/keep "${task.command}"
             container=$(docker ps --all | tail -n+2 | awk '{ print $1 }')
             if [ -z $container ]; then
               sleep 1
             fi
           done
+          curl -X PUT -H 'Content-Type: application/json' -d '{"status":"running"}' ${config.eureka_endpoint}/api/_internal/tasks/${taskId} &
           exit_status=124
           while [ $exit_status -eq 124 ]; do
             timeout 10 docker logs --since=$logs_since -t -f $container &>> $logdir/logs-${taskName}
@@ -71,19 +80,41 @@ module.exports = ({ database, config, cloud }) => {
             return
           }
 
+          const status = req.body.status
           const taskId = req.params.task_id
-          return cloud.terminateTask(taskId)
-            .then(() => database.tasks.changeTaskStatusDone(taskId))
-            .then(() => {
-              logger.info('Succesfully terminated task', taskId)
-              res.status(201).send({message: 'Task terminated successfuly'})
-            })
-            .catch(err => {
-              // TODO: Alert
-              logger.error(err)
-              res.status(500).send(`Failed to transition task ${taskId} to Done`)
-              return database.tasks.changeTaskStatusError(taskId)
-            })
+
+          switch (status) {
+            case 'running':
+              return database.tasks.changeTaskStatusRunning(taskId)
+                .then(() => {
+                  logger.info('Task %s running', taskId)
+                  res.status(201).send({message: 'Task terminated successfully'})
+                })
+                .catch(err => {
+                  // TODO: Alert
+                  logger.error(err)
+                  res.status(500).send(`Failed to transition task ${taskId} to Done`)
+                  return database.tasks.changeTaskStatusError(taskId)
+                })
+            case 'done':
+              return cloud.terminateTask(taskId)
+                .then(() => database.tasks.changeTaskStatusDone(taskId))
+                .then(() => {
+                  logger.info('Succesfully terminated task', taskId)
+                  res.status(201).send({message: 'Task terminated successfully'})
+                })
+                .catch(err => {
+                  // TODO: Alert
+                  logger.error(err)
+                  res.status(500).send(`Failed to transition task ${taskId} to Done`)
+                  return database.tasks.changeTaskStatusError(taskId)
+                })
+
+            default:
+              const err = `Received status is incorrect: ${status}`
+              logger.error(new Error(err))
+              res.status(422).send(err)
+          }
         })
         .catch(err => {
           // TODO: Alert
