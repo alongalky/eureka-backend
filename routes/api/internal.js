@@ -51,7 +51,7 @@ module.exports = ({ database, config, cloud }) => {
           ${startDocker}
           while [ -z $container ]; do
             gcloud docker -- pull ${remoteImageName}
-            docker run -t -v /mnt/eureka-account-${account}/:/keep ${remoteImageName} /bin/bash -l -c "${task.command}"
+            nvidia-docker run -t -v /mnt/eureka-account-${account}/:/keep ${remoteImageName} /bin/bash -l -c "${task.command}"
             container=$(docker ps --all | tail -n+2 | awk '{ print $1 }')
             if [ -z $container ]; then
               sleep 1
