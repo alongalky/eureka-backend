@@ -74,7 +74,7 @@ module.exports = ({ database, config, cloud }) => {
       req.checkBody('status', 'Task status must be done').notEmpty().isLowercase()
       req.getValidationResult()
         .then(result => {
-          if (!result.isEmpty() || req.body.status !== 'done') {
+          if (!result.isEmpty()) {
             logger.error(new Error('Received parameters are incorrect'))
             res.status(422).send('There have been validation errors: ' + util.inspect(result.array()))
             return

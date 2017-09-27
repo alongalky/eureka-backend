@@ -94,14 +94,12 @@ describe('Cloud controller', () => {
         database.tasks.changeTaskStatusRunning.resolves()
         dContainer.commit.resolves()
       })
-      it('transitions a task to Initializing and then Running', done => {
+      it('transitions a task to Initializing', done => {
         cloud.runTask(taskId, params)
           .then(() => {
             sinon.assert.calledOnce(database.tasks.changeTaskStatusInitializing)
-            sinon.assert.calledOnce(database.tasks.changeTaskStatusRunning)
-            sinon.assert.callOrder(database.tasks.changeTaskStatusInitializing, database.tasks.changeTaskStatusRunning)
             sinon.assert.calledWith(database.tasks.changeTaskStatusInitializing, '1234')
-            sinon.assert.calledWith(database.tasks.changeTaskStatusRunning, '1234')
+            sinon.assert.notCalled(database.tasks.changeTaskStatusRunning)
             sinon.assert.notCalled(database.tasks.changeTaskStatusError)
             sinon.assert.notCalled(database.tasks.changeTaskStatusDone)
             done()

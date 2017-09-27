@@ -42,8 +42,6 @@ module.exports = ({ config, database, Dockerode, controller, persevere }) => {
               return vm
             })
         ]))
-        .then(() => database.tasks.changeTaskStatusRunning(taskId))
-        .then(() => logger.info('Task %s running', taskId))
         .catch(err => {
           logger.error('Error starting task', taskId, err)
           terminateTask(taskId).catch(() => {})
