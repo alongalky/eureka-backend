@@ -5,7 +5,7 @@ module.exports = ({ database, config, cloud }) => {
   const waitForDocker = 'while ! docker ps &> /dev/null; do sleep 1; done'
   const startDocker = '/bin/systemctl start docker'
   const changeCwdCommand = task => Object.assign({}, task, {
-    command: [(task.workingDirectory) ? `cd ${task.workingDirectory}; export PATH=${task.workingDirectory}:$PATH; ` : '',
+    command: [(task.workingDirectory) ? `cd ${task.workingDirectory}; ` : '',
       task.command].join(' ')
   })
 
@@ -51,7 +51,7 @@ module.exports = ({ database, config, cloud }) => {
           ${startDocker}
           while [ -z $container ]; do
             gcloud docker -- pull ${remoteImageName}
-            nvidia-docker run -t -v /mnt/eureka-account-${account}/:/keep ${remoteImageName} /bin/bash -l -c "${task.command}"
+            nvidia-docker run -t -v /mnt/eureka-account-${account}/:/keep ${remoteImageName} /bin/bash -c '${task.command}'
             container=$(docker ps --all | tail -n+2 | awk '{ print $1 }')
             if [ -z $container ]; then
               sleep 1
