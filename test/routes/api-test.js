@@ -763,6 +763,19 @@ describe('API', () => {
     describe('Internal', () => {
       const goodTaskId = '47bd7765-2378-45f9-8588-f2d55c4208a7'
 
+      const tiers = [{
+        tier_id: '1',
+        name: 'tiny',
+        price_per_hour: 60,
+        gpu_count: 0
+      },
+      {
+        tier_id: '6',
+        name: 'gpu-tier',
+        price_per_hour: 600,
+        gpu_count: 1
+      }]
+
       describe('PUT /_internal/tasks/:task_id/{status}', () => {
         it('returns 201 on happy flow for status done', done => {
           cloud.terminateTask.resolves()
@@ -851,15 +864,34 @@ describe('API', () => {
               done(err)
             })
         })
-        it('returns 200 on happy flow for type-runner', done => {
+        it('returns 200 on happy flow for type-runner for non-gpu instance', done => {
           cloud.getInstanceTags.resolves(['type-runner', 'account-1234', 'task-9314', 'taskname-9191'])
           cloud.getBucketForAccount.resolves('eureka-account-1234')
-          database.tasks.getTasks.resolves([{ task_id: '9314', workingDirectory: '/test', command: 'echo hi' }])
+          database.tasks.getTasks.resolves([{ task_id: '9314', workingDirectory: '/test', command: 'echo hi', tier_id: '1' }])
+          database.tiers.getTiers.resolves(tiers)
+
           supertest(app)
             .get(`/api/_internal/scripts?vm_id=machinas`)
             .expect(200)
             .end((err, res) => {
               sinon.assert.notCalled(database.accounts.getAccounts)
+              expect(res.body.script).to.not.contain('nvidia-docker')
+
+              done(err)
+            })
+        })
+        it('returns 200 on happy flow for type-runner for gpu instance', done => {
+          cloud.getInstanceTags.resolves(['type-runner', 'account-1234', 'task-9314', 'taskname-9191'])
+          cloud.getBucketForAccount.resolves('eureka-account-1234')
+          database.tasks.getTasks.resolves([{ task_id: '9314', workingDirectory: '/test', command: 'echo hi', tier_id: '6' }])
+          database.tiers.getTiers.resolves(tiers)
+
+          supertest(app)
+            .get(`/api/_internal/scripts?vm_id=machinas`)
+            .expect(200)
+            .end((err, res) => {
+              sinon.assert.notCalled(database.accounts.getAccounts)
+              expect(res.body.script).to.contain('nvidia-docker')
 
               done(err)
             })

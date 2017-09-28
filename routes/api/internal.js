@@ -4,6 +4,10 @@ const logger = require('../../logger/logger')()
 module.exports = ({ database, config, cloud }) => {
   const waitForDocker = 'while ! docker ps &> /dev/null; do sleep 1; done'
   const startDocker = '/bin/systemctl start docker'
+  const dockerRun = ({ task, tiers }) => {
+    const tier = tiers.find(t => t.tier_id === task.tier_id)
+    return tier.gpu_count > 0 ? 'nvidia-docker run' : 'docker run'
+  }
   const changeCwdCommand = task => Object.assign({}, task, {
     command: [(task.workingDirectory) ? `cd ${task.workingDirectory}; ` : '',
       task.command].join(' ')
@@ -41,8 +45,9 @@ module.exports = ({ database, config, cloud }) => {
       database.tasks.getTasks({account}).then(tasks => {
         const task = tasks.find(t => t.task_id === taskId)
         return changeCwdCommand(task)
-      })])
-      .then(([bucket, task]) =>
+      }),
+      database.tiers.getTiers()])
+      .then(([bucket, task, tiers]) =>
         `
           mkdir -p /mnt/${bucket}
           gcsfuse --file-mode 0755 --limit-ops-per-sec -1 --stat-cache-ttl 1s --type-cache-ttl 1s ${bucket} /mnt/${bucket}
@@ -51,7 +56,7 @@ module.exports = ({ database, config, cloud }) => {
           ${startDocker}
           while [ -z $container ]; do
             gcloud docker -- pull ${remoteImageName}
-            nvidia-docker run -t -v /mnt/eureka-account-${account}/:/keep ${remoteImageName} /bin/bash -c '${task.command}'
+            ${dockerRun({task, tiers})} -t -v /mnt/eureka-account-${account}/:/keep ${remoteImageName} /bin/bash -c '${task.command}'
             container=$(docker ps --all | tail -n+2 | awk '{ print $1 }')
             if [ -z $container ]; then
               sleep 1
