@@ -1,28 +1,8 @@
-# Eureka backend
-## Metrics and analytics
-Access analytics through Azure Application Insights, using the following:
+# Eureka
+Eureka is an open-source platform for launching tasks on the cloud. For more information, check out our [docs](https://github.com/alongalky/eureka-cli-node/blob/master/docs/intro.MD).
 
-- [local](https://analytics.applicationinsights.io/subscriptions/fcb1f62a-582d-445d-89b4-f555390ff683/resourcegroups/eureka-local/components/eureka-local#/discover/home?apptype=Node.JS) environment
-- [dev](https://analytics.applicationinsights.io/subscriptions/fcb1f62a-582d-445d-89b4-f555390ff683/resourcegroups/eureka-dev-2/components/eureka-dev#/discover/query/main?apptype=Node.JS) environment
-
-## Configuring Cloud environment
-### Google Cloud Engine
-Please follow [this](https://docs.google.com/document/d/1PUvtZn2R9F5Lrld2w8-vXXuXeOx88JxSQwRaEMDhbzI/edit) document for
-an explenation on how to create the base VM to host Eureka's tasks.
-
-## Deploying with Google App Engine
-### Setting up
-Set up the Google Cloud CLI as explained [here](https://cloud.google.com/sdk/docs/).
-
-### Deploying
-Once you have everything set up, run one of the following to deploy:
-
-```
-gcloud app deploy dev.yaml --project dotted-vim-164110 --stop-previous-version
-```
-```
-gcloud app deploy beta.yaml --project eureka-beta --stop-previous-version
-```
+## Eureka backend
+This is the repo for the Eureka back-end. We are still working on providing docs for the entire set-up process. If you are interested in setting up your own Eureka deployment on AWS or Google Cloud Platform, please contact us.
 
 ## Linting
 In order to lint all project files, run:
